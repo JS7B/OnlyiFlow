@@ -18,10 +18,9 @@ claim control over direct Git commands.
 
 ## Current Status
 
-Version `0.1.0` is a verified release candidate awaiting separate owner approval to commit, push,
-or release. It contains the explicit-only `onlyiflow` Skill wrappers, bundled deterministic
-runtime, project-local SQLite state, configured Gate execution, and exactly seven MCP tools with
-closed input and output schemas.
+Version `0.1.0` is the verified GitHub release. It contains the explicit-only `onlyiflow` Skill
+wrappers, bundled deterministic runtime, project-local SQLite state, configured Gate execution,
+and exactly seven MCP tools with closed input and output schemas.
 
 Claude and Codex pass the complete activation, efficiency/Gate, and release-smoke contracts. The
 owner-assisted ZCode smoke passes the same ordinary-isolation, owner-confirmed initialization,
@@ -31,7 +30,8 @@ process remains. ZCode intentionally retains only the owner-added uninstalled lo
 source, shown in Discover with a `获取` action.
 
 The complete 15-criterion audit and accepted report hashes are recorded in the release-readiness
-evidence. Passing evidence does not itself authorize a commit, push, or release.
+evidence. The owner authorized this GitHub release on 2026-07-17; no public plugin-marketplace
+publication is included.
 
 Do not import the repository source root directly:
 host discovery differs, so isolated candidates are generated under `build/loader-candidates/` by

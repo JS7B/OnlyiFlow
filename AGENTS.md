@@ -22,20 +22,20 @@ engineering specifications explicitly approve it and a focused test justifies th
 
 ## Current Boundary
 
-Version `0.1.0` is a verified release candidate. The normative product, engineering, and release
+Version `0.1.0` is the verified GitHub release. The normative product, engineering, and release
 contracts are in `docs/product-spec.md`, `docs/engineering-spec.md`, and `docs/release-guide.md`.
-The accepted reports, hashes, three-host lifecycle results, and fifteen-criterion audit are in
-`docs/evaluations/2026-07-17-task7-release-readiness.md`.
+The accepted reports, hashes, three-host lifecycle results, fifteen-criterion audit, and delivery
+record are in `docs/evaluations/2026-07-17-task7-release-readiness.md`.
 
 No OnlyiFlow test plugin, MCP registration, versioned plugin cache, temporary workspace, or runtime
 process may remain after verification. The owner-approved uninstalled ZCode Discover source is the
 only retained lifecycle state. A successful host listing is not model-visibility evidence; accepted
 reports must contain the expected real MCP call sequence.
 
-The validated local base is `c57ad88b38e94fbba67d6b2bd561a3feff37adec`. Live `origin/main`
-points to owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a`, which is intentionally
-excluded from this tree. Do not merge it, force-push, commit, push, release, install another Codex
-version, or start later product work without explicit owner direction.
+The owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a` remains in Git history
+only. Corrective merge `0305d9e5c9bc0491bc30e5e25b72cf1097a6e068` recorded it without
+changing the validated release tree. Do not install another Codex version, publish OnlyiFlow to a
+public plugin marketplace, or start later product work without explicit owner direction.
 
 The intended first product increment is one manually invoked `onlyiflow` Skill plus one local stdio
 MCP server. It must not contain or install Hooks, subagents, commands, background monitors,

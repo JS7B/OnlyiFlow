@@ -2,8 +2,7 @@
 
 Date: 2026-07-16
 
-Status: Tasks 1 through 6 complete; Task 7 verification and formalization complete, awaiting owner
-approval plus remote-delivery direction
+Status: Tasks 1 through 7 complete; version 0.1.0 approved for GitHub publication
 
 ## Goal
 
@@ -370,7 +369,7 @@ Recorded checkpoint on 2026-07-17:
 - the final suite passes 62/62, both host validators pass, two fresh 41-file candidate builds match
   the active candidate byte-for-byte, and no bytecode or Task 6 temporary workspace remains.
 
-## Task 7: Documentation And Release Boundary — Awaiting Owner Approval
+## Task 7: Documentation And Release Boundary — Complete
 
 1. Replace research hypotheses with verified launcher instructions.
 2. Document the smallest owner installation path for every host.
@@ -405,11 +404,10 @@ Verification checkpoint on 2026-07-17:
 - all fifteen final acceptance criteria pass in
   `docs/evaluations/2026-07-17-task7-release-readiness.md`.
 
-The remaining action is separate owner approval to commit, push, and release. Live `origin/main`
-contains owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a`; it is deliberately not
-part of this validated tree. Delivery also requires explicit owner direction for handling that
-remote commit. No merge, corrective commit, force-push, or release is authorized by the
-verification results alone.
+The owner authorized a non-force corrective merge, direct `main` push, `v0.1.0` tag, and GitHub
+Release on 2026-07-17, while explicitly excluding public plugin-marketplace publication. Corrective
+merge `0305d9e5c9bc0491bc30e5e25b72cf1097a6e068` records the rejected remote commit as history but
+preserves the validated release tree byte-for-byte.
 
 ## Final Acceptance Criteria
 

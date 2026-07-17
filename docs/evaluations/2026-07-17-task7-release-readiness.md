@@ -2,12 +2,11 @@
 
 Date: 2026-07-17
 
-Status: Ready for owner review. The normative documentation and package wording have been
-formalized, and the local verification matrix, reproducible packaging, fresh Codex and Claude Task
-4/5/6 reports, current-candidate ZCode focused delta smoke, and lifecycle cleanup all pass. All
-fifteen acceptance criteria pass. Separate owner approval to commit, push, or release remains,
-together with direction for the owner-rejected remote commit; no release is authorized by this
-evidence alone.
+Status: Complete. The normative documentation and package wording are formalized, and the local
+verification matrix, reproducible packaging, fresh Codex and Claude Task 4/5/6 reports,
+current-candidate ZCode focused delta smoke, and lifecycle cleanup all pass. All fifteen acceptance
+criteria pass. The owner authorized the non-force corrective merge, direct `main` push, `v0.1.0`
+tag, and GitHub Release on 2026-07-17; public plugin-marketplace publication remains excluded.
 
 ## Release Contract
 
@@ -139,7 +138,7 @@ process.
 | 14 | ZCode import, smoke, remove, cleanup | prior full smoke plus current-candidate focused delta, unload, and cleanup evidence | Pass |
 | 15 | Git commands need external enforcement | release guide, product spec, and engineering spec state the boundary | Pass |
 
-## Remaining Gates
+## Delivery Record
 
 The final lifecycle inspection finds no installed OnlyiFlow plugin, Codex marketplace, versioned
 cache, Task workspace, measurement process, or MCP process. It also removed the empty Claude
@@ -150,16 +149,16 @@ Discover source is the only retained lifecycle state. It is uninstalled; after f
 non-behavioral wording files named above. The active generated candidate is the release source of
 truth.
 
-The validated local base is `c57ad88b38e94fbba67d6b2bd561a3feff37adec`. A final read-only remote
-check found live `origin/main` at `8a539f2b8d1debb34b184f4682910ff30dbf863a`, whose commit message is
-`test: harden Task 5 host isolation`. The owner identified it as an erroneous wrong-version run and
-directed that it be ignored. Its runner, tests, and documentation were not merged into this
-validated evidence. A no-model preflight from that version completed successfully before the owner
-decision arrived; it installed nothing, made no model call, and left no plugin data or process.
+The validated release-candidate commit is
+`95f1c6adb3b51f207c4f2d109f9ab903b15f97d9`. The owner-rejected remote commit
+`8a539f2b8d1debb34b184f4682910ff30dbf863a` remains in history only. Non-force corrective merge
+`0305d9e5c9bc0491bc30e5e25b72cf1097a6e068` has both commits as parents, and its tree hash
+`0b0ceef72cea37f50dc83f1a082898f72d6381d9` exactly matches the validated candidate tree before
+the merge. No rejected runner, test, or documentation content entered the release tree.
 
-The remaining gates are separate owner approval to commit, push, and release plus explicit
-direction for handling the owner-rejected remote commit. No merge, corrective commit, force-push,
-Task 7 completion, or release claim is valid before that direction.
+The GitHub release is `v0.1.0` in `JS7B/OnlyiFlow`. The owner authorization covers the direct
+`main` delivery, tag, and GitHub Release only; it does not authorize publishing to a public plugin
+marketplace.
 
 Before the post-evidence wording cleanup, the owner refreshed the retained marketplace and installed
 OnlyiFlow 0.1.0 through ZCode Desktop. Read-only inspection found exactly 12 files in the active
