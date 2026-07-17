@@ -1,0 +1,11 @@
+{
+  "name": "onlyiflow",
+  "version": "0.1.0",
+  "description": "Explicit project-local development-flow state and deterministic landing evidence.",
+  "author": {
+    "name": "OnlyiFlow"
+  },
+  "license": "UNLICENSED",
+  "skills": "./skills-claude/",
+  "mcpServers": "./.mcp.claude.json"
+}

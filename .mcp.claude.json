@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "onlyiflow": {
+      "command": "conda",
+      "args": [
+        "run",
+        "--no-capture-output",
+        "-n",
+        "myself",
+        "python",
+        "-s",
+        "${CLAUDE_PLUGIN_ROOT}/server/stdio.py"
+      ],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}",
+      "env": {
+        "FASTMCP_CHECK_FOR_UPDATES": "off",
+        "FASTMCP_SHOW_SERVER_BANNER": "false",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

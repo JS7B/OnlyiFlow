@@ -1,0 +1,7 @@
+interface:
+  display_name: "OnlyiFlow"
+  short_description: "Run an explicit, minimal development flow"
+  default_prompt: "Use $onlyiflow:onlyiflow to start or resume an explicit workflow for the current project."
+
+policy:
+  allow_implicit_invocation: false

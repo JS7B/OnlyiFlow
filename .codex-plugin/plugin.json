@@ -1,0 +1,28 @@
+{
+  "name": "onlyiflow",
+  "version": "0.1.0",
+  "description": "Explicit project-local development-flow state and deterministic landing evidence.",
+  "author": {
+    "name": "OnlyiFlow"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "workflow",
+    "development-flow"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "OnlyiFlow",
+    "shortDescription": "Manage explicit development-flow state.",
+    "longDescription": "A personal explicit workflow Skill and deterministic local MCP server for project state and landing evidence across supported coding agents.",
+    "developerName": "OnlyiFlow",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Use $onlyiflow:onlyiflow to start or resume an explicit workflow for the current project."
+    ]
+  }
+}
