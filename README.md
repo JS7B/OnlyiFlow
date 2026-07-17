@@ -18,25 +18,24 @@ claim control over direct Git commands.
 
 ## Current Status
 
-Tasks 1 through 3 are complete. Task 4's explicit Skill implementation, 10/5/3 evaluation set, and
-repeatable host evaluation runner are locally complete. Version `0.1.0` contains the `onlyiflow` Skill
-wrappers, the bundled deterministic runtime, project-local SQLite state, configured gate execution,
-and exactly seven MCP tools with closed input and output schemas.
+Tasks 1 through 4 are complete. Version `0.1.0` contains the `onlyiflow` Skill wrappers, the bundled
+deterministic runtime, project-local SQLite state, configured gate execution, and exactly seven MCP
+tools with closed input and output schemas. Current fresh-host Codex and Claude Code reports each
+pass all 36 Task 4 enabled/disabled cases.
 
-Claude's full fresh-session report now passes all 36 enabled/disabled cases with no infrastructure
-or cleanup error. Codex remains the Task 4 gate because direct probes confirmed severe WebSocket and
-HTTPS transport instability. The owner can rerun the documented Codex command in the
-[Task 4 evaluation contract](docs/evaluations/2026-07-16-task4-skill-evaluation.md) when that
-connection is stable. ZCode retains the same structurally verified candidate boundary; its live
-Desktop import remains an owner-assisted release gate. No test plugin or marketplace remains
-installed.
+Task 5 is complete with accepted Claude and Codex evidence from the recovery host. A stricter
+Claude isolation and no-model preflight follow-up is locally test-verified and available for
+optional recovery-host remeasurement. ZCode retains the same structurally verified candidate
+boundary; its live Desktop import remains an owner-assisted release gate. No test plugin or
+marketplace remains installed.
 
 Do not import the repository source root directly:
 host discovery differs, so isolated candidates are generated under `build/loader-candidates/` by
 `scripts/build_loader_candidates.py`.
 
-The older `D:\AgentX\OnlyiFlow` repository is reference material only. This repository does not
-inherit its adapter, Hook, Attention, event-ingestion, or capability-probe architecture.
+The former OnlyiFlow repository, when separately available, is reference material only. This
+repository does not inherit its adapter, Hook, Attention, event-ingestion, or capability-probe
+architecture.
 
 ## Documents
 

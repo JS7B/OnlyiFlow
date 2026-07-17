@@ -14,9 +14,9 @@ configuration, observe Agent lifecycles, or recreate a mandatory development met
 
 ## Binding Decisions
 
-1. `E:\onlyiflow` is the only implementation repository on the current host.
-2. `D:\AgentX\OnlyiFlow` is the historical old-host reference location. No merge, cherry-pick, or
-   directory copy from that material is allowed.
+1. The root of the current greenfield clone is the only implementation repository.
+2. The former OnlyiFlow repository, when separately available, is read-only reference material.
+   No merge, cherry-pick, or directory copy is allowed.
 3. The repository is the source root; tested, isolated host candidates are the install roots.
 4. The first portable product contains one Skill and one local MCP server.
 5. The MCP surface contains exactly seven tools.
@@ -290,10 +290,12 @@ Checkpoint on 2026-07-17:
 - each representative flow verifies host-owned ordinary implementation, intentional regression
   injection, failed Gate evidence, ordinary repair, passing Gate, and owner-controlled landing;
 - reports persist only the six approved metric groups plus acceptance booleans and cleanup status;
-- the focused Task 5 suite passes all seven tests, including Windows CLI argument and temporary
-  cleanup regressions plus the deterministic failing-then-passing Gate fixture;
-- live Claude and Codex runs were interrupted by the unstable model connection and then stopped at
-  the owner's request; no partial report is accepted;
+- Claude measurement commands now disable prompt suggestions and strictly isolate either an empty
+  MCP map or the single explicit OnlyiFlow server;
+- no-model preflight verifies the generated candidate, `myself` runtime, host CLI, and clean host
+  lifecycle before the full runner can make a model call;
+- before integration, the strict-isolation branch passed 10 focused Task 5 tests and 62 total tests;
+- earlier live Claude and Codex runs were interrupted and no partial report was accepted;
 - all temporary processes, workspaces, Codex plugin, marketplace, and cache state were removed and
   verified absent;
 - exact continuation commands and the remaining Gate diagnostic are recorded in
@@ -321,6 +323,18 @@ New-machine completion on 2026-07-17:
   `git diff --check` pass, and the active candidate contains 40 files;
 - the Codex plugin, marketplace, cache, Task 5 workspaces, controller directories, measurement
   processes, and MCP processes are absent. Task 6 was not started.
+
+Strict-isolation follow-up handoff on 2026-07-17:
+
+- the merged runner strictly isolates Claude to an empty disabled MCP map or one enabled OnlyiFlow
+  server, disables prompt suggestions, and automatically runs a no-model preflight;
+- a test-first fix places an option boundary after Claude's variable-length `--mcp-config` value so
+  the final prompt cannot be parsed as another configuration path;
+- the merged suite passes 63/63, including 11 focused Task 5 tests, and both host preflights and
+  candidate validators pass;
+- an original-host Claude follow-up progressed into the managed quick flow before the owner stopped
+  it and delegated optional remeasurement to the recovery host; no partial report was accepted and
+  all related process, workspace, and lifecycle state was removed.
 
 ## Task 6: Three-Host Release Smoke
 

@@ -6,10 +6,11 @@ These instructions apply to the entire repository.
 
 Repository and product name: `OnlyiFlow`.
 
-This directory is a greenfield repository. `D:\AgentX\OnlyiFlow` is reference material only. Do
-not merge, cherry-pick, copy directories, or preserve APIs merely because they exist in that older
-repository. Reuse an idea only when the current product and engineering specifications explicitly
-approve it and a focused test justifies the implementation.
+This directory is a greenfield repository. The former OnlyiFlow repository, when separately
+available, is reference material only. Do not merge, cherry-pick, copy directories, or preserve
+APIs merely because they exist in that older repository. Reuse an idea only when the current
+product and engineering specifications explicitly approve it and a focused test justifies the
+implementation.
 
 ## Owner And Environment
 
@@ -22,7 +23,10 @@ approve it and a focused test justifies the implementation.
 
 ## Current Boundary
 
-Tasks 1 through 5 are complete. Task 6 has not started and requires new owner direction.
+Tasks 1 through 5 are complete. Task 5 acceptance remains based on the recovery-host reports. A
+strict Claude isolation and no-model preflight follow-up is locally test-verified and handed to the
+recovery host for optional live remeasurement. Task 6 has not started and requires new owner
+direction.
 Current fresh-host enabled/disabled reports for both Codex and Claude pass all 36 Task 4 cases with
 no infrastructure or cleanup error. The repository currently contains:
 
@@ -33,7 +37,8 @@ no infrastructure or cleanup error. The repository currently contains:
 - isolated host candidates for Codex, Claude Code, and ZCode;
 - loader evidence, a reproducible packaging builder, Task 3 contract tests, and the Task 4
   10/5/3 evaluation runner;
-- a test-first Task 5 efficiency/Gate measurement runner with accepted Claude and Codex reports;
+- a test-first Task 5 efficiency/Gate measurement runner with accepted Claude and Codex reports,
+  strict Claude MCP isolation, and no-model host preflight;
 - a tested Windows CLI resolver that keeps the proven npm entry points and falls back to verified
   native Claude or Codex Desktop executables;
 - deterministic Gate processes that close inherited stdin, plus an explicit Skill boundary that
@@ -49,11 +54,14 @@ model-visible tools were injected; the evaluation report must contain the expect
 authorization. Do not revise the Skill description more than the one revision budget already
 recorded in the evaluation fixture.
 
-Task 5 final evidence is in
-`docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`. Accepted local reports are
+Task 5 evidence and the follow-up handoff are in
+`docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`. Accepted recovery-host reports are
 `build/task5-measurement-results/claude-20260717T042226Z.json` and
 `build/task5-measurement-results/codex-20260717T045117Z.json`; both pass every budget and
-measurement with no cleanup error. Do not start Task 6 without new owner direction.
+measurement with no cleanup error. Any optional remeasurement must run Claude and Codex serially.
+Do not start Task 6 without new owner direction.
+
+Readiness-only `--preflight-only`, local tests, and validators make no model call or plugin change.
 
 The intended first product increment is one manually invoked `onlyiflow` Skill plus one local stdio
 MCP server. It must not contain or install Hooks, subagents, commands, background monitors,
@@ -199,7 +207,8 @@ Current local verification consists of:
 
 ```powershell
 conda run --no-capture-output -n myself python -s -B -m unittest discover -s tests -v
-conda run --no-capture-output -n myself python -s -B "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
+$CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
+conda run --no-capture-output -n myself python -s -B (Join-Path $CodexHome "skills\.system\skill-creator\scripts\quick_validate.py") build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
 claude plugin validate build\loader-candidates\claude\onlyiflow
 ```
 

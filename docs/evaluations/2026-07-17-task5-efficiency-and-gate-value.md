@@ -2,8 +2,8 @@
 
 Date: 2026-07-17
 
-Status: Complete; accepted Claude and Codex reports pass every measurement and budget with no
-cleanup error
+Status: Complete from accepted recovery-host evidence; strict-isolation follow-up handed off for
+optional recovery-host remeasurement
 
 ## Scope
 
@@ -33,12 +33,20 @@ Gate output.
   privacy, source-edit detection, Claude argument boundaries, and the deterministic failing-then-
   passing Gate fixture.
 - The runner keeps implementation turns ordinary and requires zero OnlyiFlow calls during them.
+- Claude measurements disable prompt suggestions and use `--strict-mcp-config`. Disabled mode gets
+  an empty MCP map; enabled mode gets one explicit OnlyiFlow server rendered from the tracked
+  Claude MCP template. Other user, project, and plugin MCP configurations cannot enter the
+  measurement.
+- `--preflight-only` checks the generated candidate, the `myself` Python/FastMCP runtime, the
+  selected host CLI, and either Claude candidate validation or a clean Codex test lifecycle. It
+  performs no model call and makes no plugin change.
 - Managed quick must start with exactly `project_status -> flow_start` and no spec or plan.
 - Managed standard must start with exactly `project_status -> flow_start -> spec_submit ->
   flow_claim` and exactly one compact spec.
 - The Windows temporary-directory cleanup uses a verified system-temp root plus bounded retries.
   This avoids Python's recursive cleanup failure when a host child briefly retains its cwd.
-- The final complete local suite passes all 59 tests, including the 7 focused Task 5 tests.
+- Before integration, the recovery-host branch passed 59 tests and the strict-isolation branch
+  passed 62 tests. The merged suite now passes all 63 tests, including 11 focused Task 5 tests.
 
 ## Interrupted Live Evidence
 
@@ -55,8 +63,14 @@ Claude:
   after the repair;
 - two later quick-only retries ended at the first model call with infrastructure errors after about
   183 seconds;
-- a plugin-free, tool-free Claude fixed-marker probe then exceeded 120 seconds, confirming the
-  current network/host connection was unsuitable for further measurement.
+- the original fixed-marker probe also exceeded its outer timeout, but it did not isolate MCP or
+  Skill discovery, so that result is no longer sufficient evidence of a network failure;
+- a strict probe from the system temporary directory, with an empty MCP map and slash commands
+  disabled, returned `ONLYIFLOW_NETWORK_OK` in 7.58 seconds with exit code zero;
+- that result reported one main `glm-5.2[1M]` turn through the configured third-party Anthropic-
+  compatible provider plus a small `glm-4.5-air` auxiliary use. The runner now passes
+  `--prompt-suggestions false` to remove that irrelevant auxiliary request;
+- the repaired strict-isolation runner has not yet been used for an accepted live report.
 
 Codex:
 
@@ -72,9 +86,9 @@ marketplace, cache directory, and all Task 5 temporary workspaces were removed a
 
 ## New-Machine Recovery And Probe Evidence
 
-The repository was restored at `E:\onlyiflow` with clean `main` and `origin/main` both at
-`6107ba850821283bc216f1d2a1342b03ec308c9a`. The generated loader candidates and the two accepted
-Task 4 reports were restored from the old-machine handoff.
+A fresh clone was restored with clean `main` and `origin/main` both at
+`6107ba850821283bc216f1d2a1342b03ec308c9a`. Generated loader candidates and the two accepted Task 4
+reports were restored from the old-machine handoff.
 
 - The `myself` environment initially lacked the declared FastMCP dependency. After owner approval,
   FastMCP 3.4.4 was installed because that is the version family verified by the engineering
@@ -122,8 +136,8 @@ and the next Codex run passed.
 
 ## Accepted Reports
 
-The local reports are ignored build artifacts, consistent with Task 4. Their paths, hashes, and
-complete approved metrics are recorded here:
+The reports generated on the recovery host are ignored build artifacts, consistent with Task 4.
+Their paths, hashes, and complete approved metrics are recorded here:
 
 | Host | Report | SHA-256 |
 | --- | --- | --- |
@@ -146,7 +160,7 @@ complete approved metrics are recorded here:
 Both reports have `status = passed`, all eight `acceptance_budgets = true`, every
 `measurement.task_success = true`, and `cleanup_errors = []`.
 
-## Final Verification And Cleanup
+## Prior Accepted Verification And Cleanup
 
 - The complete suite passes 59/59 after the live fixes.
 - The current Codex Skill validator, Claude plugin validator, and `git diff --check` pass.
@@ -155,11 +169,75 @@ Both reports have `status = passed`, all eight `acceptance_budgets = true`, ever
   OnlyiFlow plugin. Other installed plugins were not changed.
 - No Task 5 measurement workspace, controller directory, runner, host child, or MCP server remains.
   Temporary candidate backups and controller logs were removed after verification.
-- Task 5 is complete. Task 6 was not started.
+- At that checkpoint Task 5 was accepted. Task 6 was not started. The merged runner adds stricter
+  Claude isolation and automatic preflight as a follow-up without invalidating those accepted
+  reports.
 
-## Reproduction Commands
+## Strict-Isolation Follow-Up Handoff
 
-Use the `myself` environment from `E:\onlyiflow`. Do not run the two hosts concurrently.
+The original host integrated the recovery-host product fixes with strict Claude MCP isolation,
+path-neutral commands, and automatic no-model preflight. Local contract verification passed 63/63,
+both host preflights passed, and both candidate validators passed.
+
+The first Claude follow-up exited immediately because `--mcp-config` accepts multiple values and
+was adjacent to the final prompt. Claude therefore parsed the prompt as another configuration
+path. A regression assertion first failed, then the command was reordered so
+`--prompt-suggestions false` terminates the variable-length MCP configuration argument before the
+prompt. The 11 focused Task 5 tests and the complete 63-test suite passed after the fix.
+
+A second strict-isolation Claude run progressed through baseline, initialization, and into the
+managed quick flow. The owner then delegated optional remeasurement to the recovery host, so the
+original-host run was stopped and no partial report was accepted. Its complete process tree and
+Task 5 workspace were removed; no Task 5 report, process, temporary workspace, or Codex lifecycle
+remained. The recovery host may use the commands below after pulling this follow-up.
+
+## Fresh-Clone Host Contract
+
+The repository may be cloned to any directory or drive. No execution command depends on the
+original development path. Run all repository commands from the root of the current clone.
+
+The first increment is source-portable but not runtime-self-contained. Before any live Task 5 run,
+the host must already provide:
+
+- Windows for the currently accepted host evidence; the Python runtime has POSIX branches, but no
+  Task 5 POSIX acceptance report exists;
+- Windows PowerShell 5.1 or newer for the documented owner commands; do not assume PowerShell 7
+  operators such as `||` are available;
+- Conda with a native executable discoverable by child processes;
+- an existing Conda environment named `myself` containing Python 3.11 or newer and
+  `fastmcp>=3.4,<4`;
+- generated `build/loader-candidates/` content from the current source revision;
+- the selected authenticated host CLI on `PATH`;
+- for the currently verified Windows npm layout, Node.js and the npm-installed Codex/Claude Code
+  package files used by the safe executable resolver;
+- Git for cloning and the later owner-authorized commit/push workflow;
+- a writable system temporary directory; Windows timeout cleanup also uses the built-in
+  `taskkill.exe`;
+- permission for the Codex run to add and remove only the temporary `onlyiflow-dev` marketplace and
+  plugin lifecycle;
+- exactly one active Task 5 runner across all terminals and machines.
+
+Versions observed on the original acceptance host are Windows PowerShell 5.1, Conda 24.5.0,
+Python 3.12.0, FastMCP 3.4.4, Codex CLI 0.144.4, Claude Code 2.1.212, and Node.js 24.14.1. These are
+evidence, not portable absolute paths and not an instruction to upgrade another host. Installing or
+upgrading a missing dependency requires owner approval.
+
+Claude Code may use Anthropic or an Anthropic-compatible provider. The current acceptance host is
+configured for the Zhipu endpoint with `opus` mapped to `glm-5.2[1M]`; any live result must be
+described with that host/provider context rather than presented as an Anthropic-model result.
+
+## Readiness-Only Commands
+
+The following readiness checks make no model call and install no plugin.
+
+From the root of the current clone, first confirm that the owner-provided runtime exists:
+
+```powershell
+conda --version
+conda run --no-capture-output -n myself python -s -c "import importlib.metadata as m, sys; print(sys.version); print(m.version('fastmcp'))"
+```
+
+If either command fails, stop and ask the owner before installing or changing anything.
 
 If `build/loader-candidates/` is absent after a fresh clone, build it first:
 
@@ -167,11 +245,24 @@ If `build/loader-candidates/` is absent after a fresh clone, build it first:
 conda run --no-capture-output -n myself python -s -B scripts\build_loader_candidates.py
 ```
 
-Verify the local runner before spending model calls:
+Run both no-model preflights. The full runner repeats the selected host preflight automatically
+before any model call:
+
+```powershell
+conda run --no-capture-output -n myself python -s -B scripts\run_efficiency_measurements.py --host claude --preflight-only
+conda run --no-capture-output -n myself python -s -B scripts\run_efficiency_measurements.py --host codex --preflight-only
+```
+
+Then verify the complete local suite:
 
 ```powershell
 conda run --no-capture-output -n myself python -s -B -m unittest discover -s tests -v
 ```
+
+## Optional Recovery-Host Remeasurement Commands
+
+Run these only if the owner requests strict-isolation remeasurement. Never run the two hosts
+concurrently.
 
 Run Claude first on a stable connection:
 

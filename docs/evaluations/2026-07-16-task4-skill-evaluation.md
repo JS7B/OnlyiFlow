@@ -25,7 +25,7 @@ evaluation itself from dominating the product's ceremony budget.
 
 ## Owner Commands
 
-Run from `D:\AgentX\OnlyiFlow_next`:
+Run from the root of the current clone:
 
 ```powershell
 conda run --no-capture-output -n myself python -s -B scripts/run_skill_evaluations.py --host codex --mode both --timeout-seconds 600 --allow-codex-plugin-lifecycle

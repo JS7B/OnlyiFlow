@@ -2,15 +2,15 @@
 
 Date: 2026-07-16
 
-Status: Tasks 1 through 4 complete; Task 5 measurement implementation complete, live evidence pending
+Status: Tasks 1 through 5 complete; Task 6 not started
 
 ## Greenfield Rule
 
 This repository starts from an empty implementation boundary.
 
-`D:\AgentX\OnlyiFlow` may be read to understand prior failures and stable domain ideas, but it is
-not a source branch. Do not merge it, cherry-pick it, copy its package directories, or preserve its
-unreleased APIs.
+The former OnlyiFlow repository, when separately available, may be read to understand prior
+failures and stable domain ideas, but it is not a source branch. Do not merge it, cherry-pick it,
+copy its package directories, or preserve its unreleased APIs.
 
 Ideas that may be independently reimplemented after tests justify them:
 
@@ -122,7 +122,9 @@ justify the split.
 
 The owner-approved `myself` environment remains the interpreter source. Task 2 was verified with
 Python 3.12 and the already-installed FastMCP 3.4 family. No absolute interpreter path or dependency
-installation was added.
+installation was added. The first increment is source- and path-portable, not runtime-self-
+contained: every acceptance host must already provide Conda, the `myself` environment, Python
+3.11+, and `fastmcp>=3.4,<4` before a generated candidate can start.
 
 ## Project Root Contract
 

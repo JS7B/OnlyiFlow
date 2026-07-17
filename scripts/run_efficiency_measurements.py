@@ -26,10 +26,12 @@ if str(SOURCE_ROOT) not in sys.path:
 
 from onlyiflow.runtime import Runtime
 from scripts.run_skill_evaluations import (
+    CLAUDE_CANDIDATE,
     CLAUDE_TOOLS,
     CodexLifecycle,
     called_tools,
     claude_command,
+    cli_prefix,
     codex_command,
     codex_skill_prompt,
     infrastructure_failure,
@@ -245,7 +247,33 @@ def task5_host_command(
     else:
         index = command.index("--disable-slash-commands")
         command[index:index] = ["--allowedTools", allowed]
+    command[-1:-1] = [
+        "--strict-mcp-config",
+        "--mcp-config",
+        task5_claude_mcp_config(enabled),
+        "--prompt-suggestions",
+        "false",
+    ]
     return command
+
+
+def task5_claude_mcp_config(enabled: bool) -> str:
+    if not enabled:
+        return json.dumps({"mcpServers": {}}, separators=(",", ":"))
+
+    template = json.loads(
+        (REPOSITORY_ROOT / ".mcp.claude.json").read_text(encoding="utf-8")
+    )
+    server = template["mcpServers"]["onlyiflow"]
+    rendered = json.loads(
+        json.dumps(server).replace(
+            "${CLAUDE_PLUGIN_ROOT}", CLAUDE_CANDIDATE.resolve().as_posix()
+        )
+    )
+    return json.dumps(
+        {"mcpServers": {"plugin_onlyiflow_onlyiflow": rendered}},
+        separators=(",", ":"),
+    )
 
 
 @contextmanager
@@ -702,12 +730,150 @@ def write_report(report: dict) -> Path:
     return path
 
 
+def run_preflight_command(command: list[str], timeout: int) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        command,
+        cwd=REPOSITORY_ROOT,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+    )
+
+
+def task5_preflight(host: str) -> dict:
+    checks: list[dict] = []
+
+    def add(check_id: str, passed: bool, detail: str) -> None:
+        checks.append({"id": check_id, "passed": passed, "detail": detail})
+
+    candidate = (
+        REPOSITORY_ROOT / "build/loader-candidates/codex-marketplace"
+        if host == "codex"
+        else CLAUDE_CANDIDATE
+    )
+    candidate_present = candidate.is_dir()
+    add(
+        "loader_candidate",
+        candidate_present,
+        "present" if candidate_present else "run scripts/build_loader_candidates.py",
+    )
+
+    conda = shutil.which("conda.exe" if sys.platform == "win32" else "conda")
+    if conda is None:
+        add("myself_runtime", False, "native conda executable unavailable")
+    else:
+        probe_script = (
+            "import importlib.metadata as m,json,platform;"
+            "print(json.dumps({'python':platform.python_version(),"
+            "'fastmcp':m.version('fastmcp')}))"
+        )
+        try:
+            completed = run_preflight_command(
+                [
+                    conda,
+                    "run",
+                    "--no-capture-output",
+                    "-n",
+                    "myself",
+                    "python",
+                    "-s",
+                    "-c",
+                    probe_script,
+                ],
+                30,
+            )
+            payload = json.loads(
+                [line for line in completed.stdout.splitlines() if line.strip()][-1]
+            )
+            python_parts = tuple(int(part) for part in payload["python"].split(".")[:2])
+            fastmcp_parts = tuple(
+                int(part) for part in payload["fastmcp"].split(".")[:2]
+            )
+            supported = (
+                completed.returncode == 0
+                and python_parts >= (3, 11)
+                and fastmcp_parts >= (3, 4)
+                and fastmcp_parts < (4, 0)
+            )
+            add(
+                "myself_runtime",
+                supported,
+                f"Python {payload['python']}; FastMCP {payload['fastmcp']}",
+            )
+        except (
+            IndexError,
+            json.JSONDecodeError,
+            KeyError,
+            OSError,
+            ValueError,
+            subprocess.TimeoutExpired,
+        ):
+            add("myself_runtime", False, "myself environment probe failed")
+
+    host_prefix: list[str] | None = None
+    try:
+        host_prefix = cli_prefix(host)
+        completed = run_preflight_command(
+            [*host_prefix, "--version"],
+            15,
+        )
+        version = (completed.stdout or completed.stderr).strip().splitlines()[0]
+        add(f"{host}_cli", completed.returncode == 0, version)
+    except (IndexError, OSError, RuntimeError, subprocess.TimeoutExpired):
+        add(f"{host}_cli", False, f"{host} CLI unavailable")
+
+    if host == "claude":
+        if host_prefix is None or not candidate_present:
+            add("claude_candidate", False, "candidate validation unavailable")
+        else:
+            try:
+                completed = run_preflight_command(
+                    [*host_prefix, "plugin", "validate", str(candidate)],
+                    30,
+                )
+                add(
+                    "claude_candidate",
+                    completed.returncode == 0,
+                    "validation passed" if completed.returncode == 0 else "validation failed",
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                add("claude_candidate", False, "candidate validation failed")
+    else:
+        try:
+            CodexLifecycle().assert_absent()
+            add("codex_lifecycle", True, "OnlyiFlow test lifecycle absent")
+        except RuntimeError:
+            add("codex_lifecycle", False, "OnlyiFlow test lifecycle is not clean")
+
+    return {
+        "host": host,
+        "passed": all(check["passed"] for check in checks),
+        "checks": checks,
+    }
+
+
+def print_task5_preflight(result: dict) -> None:
+    status = "PASSED" if result["passed"] else "FAILED"
+    print(f"Task 5 preflight ({result['host']}): {status}")
+    for check in result["checks"]:
+        marker = "PASS" if check["passed"] else "FAIL"
+        print(f"[{marker}] {check['id']}: {check['detail']}")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Measure OnlyiFlow Task 5 efficiency and deterministic gate value."
     )
     parser.add_argument("--host", choices=["codex", "claude"], required=True)
     parser.add_argument("--timeout-seconds", type=int, default=600)
+    parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="Check local dependencies and candidate state without model calls.",
+    )
     parser.add_argument(
         "--allow-codex-plugin-lifecycle",
         action="store_true",
@@ -718,10 +884,19 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.preflight_only:
+        result = task5_preflight(args.host)
+        print_task5_preflight(result)
+        return 0 if result["passed"] else 2
     if args.timeout_seconds < 30:
         raise SystemExit("--timeout-seconds must be at least 30.")
     if args.host == "codex" and not args.allow_codex_plugin_lifecycle:
         raise SystemExit("Codex measurements require --allow-codex-plugin-lifecycle.")
+
+    preflight = task5_preflight(args.host)
+    print_task5_preflight(preflight)
+    if not preflight["passed"]:
+        return 2
 
     lifecycle = CodexLifecycle() if args.host == "codex" else None
     codex_skill_path: Path | None = None

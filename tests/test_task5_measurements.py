@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import support
 
@@ -17,6 +20,7 @@ from scripts.run_efficiency_measurements import (
     require_turn,
     source_snapshot,
     summarize_flow,
+    task5_preflight,
     task5_host_command,
 )
 
@@ -148,7 +152,132 @@ class Task5MeasurementTests(unittest.TestCase):
         allowed_index = command.index("--allowedTools")
         disabled_index = command.index("--disable-slash-commands")
         self.assertLess(allowed_index, disabled_index)
+        self.assertEqual(
+            json.loads(command[command.index("--mcp-config") + 1]),
+            {"mcpServers": {}},
+        )
+        self.assertEqual(
+            command[command.index("--mcp-config") + 2],
+            "--prompt-suggestions",
+        )
+        self.assertIn("--strict-mcp-config", command)
+        self.assertEqual(
+            command[command.index("--prompt-suggestions") + 1],
+            "false",
+        )
         self.assertEqual(command[-1], "ordinary prompt")
+
+    def test_enabled_claude_command_loads_only_the_explicit_plugin_server(self) -> None:
+        command = task5_host_command(
+            "claude",
+            Path("project"),
+            "/onlyiflow:onlyiflow start a quick flow",
+            enabled=True,
+        )
+
+        config = json.loads(command[command.index("--mcp-config") + 1])
+        self.assertEqual(
+            set(config["mcpServers"]),
+            {"plugin_onlyiflow_onlyiflow"},
+        )
+        server = config["mcpServers"]["plugin_onlyiflow_onlyiflow"]
+        self.assertTrue(Path(server["cwd"]).is_absolute())
+        self.assertTrue(server["args"][-1].replace("\\", "/").endswith("/server/stdio.py"))
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", json.dumps(config))
+        self.assertIn("--strict-mcp-config", command)
+        self.assertEqual(
+            command[command.index("--prompt-suggestions") + 1],
+            "false",
+        )
+        self.assertEqual(command[-1], "/onlyiflow:onlyiflow start a quick flow")
+
+    def test_preflight_reports_missing_candidate_and_tools_without_model_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            missing = Path(root) / "missing-candidate"
+            with (
+                patch(
+                    "scripts.run_efficiency_measurements.CLAUDE_CANDIDATE",
+                    missing,
+                ),
+                patch(
+                    "scripts.run_efficiency_measurements.shutil.which",
+                    return_value=None,
+                ),
+                patch(
+                    "scripts.run_efficiency_measurements.cli_prefix",
+                    side_effect=RuntimeError("Required CLI is unavailable: claude"),
+                ),
+                patch("scripts.run_efficiency_measurements.subprocess.run") as run,
+            ):
+                result = task5_preflight("claude")
+
+        self.assertFalse(result["passed"])
+        checks = {check["id"]: check for check in result["checks"]}
+        self.assertFalse(checks["loader_candidate"]["passed"])
+        self.assertFalse(checks["myself_runtime"]["passed"])
+        self.assertFalse(checks["claude_cli"]["passed"])
+        run.assert_not_called()
+
+    def test_preflight_accepts_a_complete_claude_environment(self) -> None:
+        conda_probe = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout='{"python":"3.12.0","fastmcp":"3.4.4"}\n',
+            stderr="",
+        )
+        version_probe = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="2.1.212 (Claude Code)\n",
+            stderr="",
+        )
+        validation = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="Validation passed\n",
+            stderr="",
+        )
+        with tempfile.TemporaryDirectory() as root:
+            candidate = Path(root) / "onlyiflow"
+            candidate.mkdir()
+            with (
+                patch(
+                    "scripts.run_efficiency_measurements.CLAUDE_CANDIDATE",
+                    candidate,
+                ),
+                patch(
+                    "scripts.run_efficiency_measurements.shutil.which",
+                    return_value="conda.exe",
+                ),
+                patch(
+                    "scripts.run_efficiency_measurements.cli_prefix",
+                    return_value=["claude.exe"],
+                ),
+                patch(
+                    "scripts.run_efficiency_measurements.subprocess.run",
+                    side_effect=[conda_probe, version_probe, validation],
+                ),
+            ):
+                result = task5_preflight("claude")
+
+        self.assertTrue(result["passed"])
+        self.assertTrue(all(check["passed"] for check in result["checks"]))
+
+    def test_task5_handoff_is_clone_relative_and_requires_preflight(self) -> None:
+        handoff = (
+            support.REPOSITORY_ROOT
+            / "docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("D:\\AgentX", handoff)
+        self.assertNotIn("C:\\Users\\JS7B", handoff)
+        self.assertIn("root of the current clone", handoff)
+        self.assertIn("--host claude --preflight-only", handoff)
+        self.assertIn("--host codex --preflight-only", handoff)
+        self.assertIn(
+            "Never run the two hosts concurrently",
+            " ".join(handoff.split()),
+        )
 
     def test_measurement_gate_catches_fault_then_passes_after_fix(self) -> None:
         from onlyiflow.runtime import Runtime
