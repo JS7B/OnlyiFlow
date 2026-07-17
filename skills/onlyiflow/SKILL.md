@@ -35,6 +35,9 @@ tool sequence before reporting. For a managed quick start, call `project_status`
 in the same turn. For a complete managed standard start, continue through `flow_start`,
 `spec_submit`, and `flow_claim` in the same turn.
 
+After a managed start reaches `implementing`, report the state and stop. Do not inspect or edit
+project files in that same explicit OnlyiFlow turn.
+
 ## Require owner turns
 
 Never call `project_init` on the first unmanaged turn. Report the exact initialization entries,

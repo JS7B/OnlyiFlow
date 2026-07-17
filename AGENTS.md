@@ -22,7 +22,7 @@ approve it and a focused test justifies the implementation.
 
 ## Current Boundary
 
-Tasks 1 through 4 are complete. Task 5 is in progress and paused for a stable model connection.
+Tasks 1 through 5 are complete. Task 6 has not started and requires new owner direction.
 Current fresh-host enabled/disabled reports for both Codex and Claude pass all 36 Task 4 cases with
 no infrastructure or cleanup error. The repository currently contains:
 
@@ -33,22 +33,27 @@ no infrastructure or cleanup error. The repository currently contains:
 - isolated host candidates for Codex, Claude Code, and ZCode;
 - loader evidence, a reproducible packaging builder, Task 3 contract tests, and the Task 4
   10/5/3 evaluation runner;
-- a test-first Task 5 efficiency/Gate measurement runner with no accepted live report yet;
+- a test-first Task 5 efficiency/Gate measurement runner with accepted Claude and Codex reports;
+- a tested Windows CLI resolver that keeps the proven npm entry points and falls back to verified
+  native Claude or Codex Desktop executables;
+- deterministic Gate processes that close inherited stdin, plus an explicit Skill boundary that
+  stops a managed start before host-owned implementation;
 - no installed test plugin, marketplace, MCP registration, cache, or runtime process.
 
 Task 4 acceptance evidence is
 `build/task4-evaluation-results/codex-both-20260717T014407Z.json` and
-`build/task4-evaluation-results/claude-both-20260716T195242Z.json`. Do not start Task 5 without new
-owner direction. Do not treat a successful `codex mcp list` or `codex mcp get` as proof that
+`build/task4-evaluation-results/claude-both-20260716T195242Z.json`. Do not treat a successful
+`codex mcp list` or `codex mcp get` as proof that
 model-visible tools were injected; the evaluation report must contain the expected real
 `mcp_tool_call` sequence. Do not install or test another Codex version without explicit owner
 authorization. Do not revise the Skill description more than the one revision budget already
 recorded in the evaluation fixture.
 
-Task 5 continuation evidence and exact new-window commands are in
-`docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`. Do not start Task 6 until the
-Claude and Codex Task 5 reports both pass all budgets, the complete local suite passes, and the
-temporary Codex lifecycle is again verified absent.
+Task 5 final evidence is in
+`docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`. Accepted local reports are
+`build/task5-measurement-results/claude-20260717T042226Z.json` and
+`build/task5-measurement-results/codex-20260717T045117Z.json`; both pass every budget and
+measurement with no cleanup error. Do not start Task 6 without new owner direction.
 
 The intended first product increment is one manually invoked `onlyiflow` Skill plus one local stdio
 MCP server. It must not contain or install Hooks, subagents, commands, background monitors,
@@ -194,7 +199,7 @@ Current local verification consists of:
 
 ```powershell
 conda run --no-capture-output -n myself python -s -B -m unittest discover -s tests -v
-conda run --no-capture-output -n myself python -s -B C:\Users\JS7B\.codex\skills\.system\skill-creator\scripts\quick_validate.py build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
+conda run --no-capture-output -n myself python -s -B "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
 claude plugin validate build\loader-candidates\claude\onlyiflow
 ```
 

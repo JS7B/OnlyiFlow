@@ -86,6 +86,8 @@ class SkillContractTests(unittest.TestCase):
             "Report exactly one current state and one next action, then stop.",
             "For a managed quick start, call `project_status` and `flow_start` "
             "in the same turn.",
+            "After a managed start reaches `implementing`, report the state and stop. "
+            "Do not inspect or edit project files in that same explicit OnlyiFlow turn.",
             "Treat an intermediate `next_action` as transition guidance, not as "
             "a stop condition.",
             "Model uncertainty alone is not deep-risk evidence.",

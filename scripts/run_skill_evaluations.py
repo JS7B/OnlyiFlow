@@ -74,19 +74,50 @@ def load_evaluations() -> dict:
 
 def cli_prefix(name: str) -> list[str]:
     if os.name == "nt":
-        wrapper = shutil.which(f"{name}.cmd") or shutil.which(name)
-        if wrapper is None:
-            raise RuntimeError(f"Required CLI is unavailable: {name}")
-        npm_root = Path(wrapper).resolve().parent
+        candidates: list[list[str]] = []
+        native = shutil.which(f"{name}.exe")
+        if native is not None:
+            candidates.append([native])
+
         if name == "codex":
-            node = shutil.which("node.exe")
-            script = npm_root / "node_modules/@openai/codex/bin/codex.js"
-            if node is not None and script.is_file():
-                return [node, str(script)]
-        if name == "claude":
-            native = npm_root / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
-            if native.is_file():
-                return [str(native)]
+            local_app_data = os.environ.get("LOCALAPPDATA")
+            if local_app_data:
+                desktop_bins = Path(local_app_data) / "OpenAI/Codex/bin"
+                candidates.extend(
+                    [str(path)]
+                    for path in sorted(desktop_bins.glob("*/codex.exe"), reverse=True)
+                )
+
+        wrapper = shutil.which(f"{name}.cmd")
+        if wrapper is not None:
+            npm_root = Path(wrapper).resolve().parent
+            if name == "codex":
+                node = shutil.which("node.exe")
+                script = npm_root / "node_modules/@openai/codex/bin/codex.js"
+                if node is not None and script.is_file():
+                    candidates.append([node, str(script)])
+            if name == "claude":
+                npm_native = (
+                    npm_root
+                    / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
+                )
+                if npm_native.is_file():
+                    candidates.append([str(npm_native)])
+
+        for candidate in candidates:
+            try:
+                completed = subprocess.run(
+                    [*candidate, "--version"],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if completed.returncode == 0:
+                return candidate
         raise RuntimeError(f"Safe Windows CLI entry point is unavailable: {name}")
 
     resolved = shutil.which(name)

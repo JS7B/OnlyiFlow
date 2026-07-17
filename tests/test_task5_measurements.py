@@ -8,11 +8,13 @@ import support
 
 from scripts.run_efficiency_measurements import (
     APPROVED_METRIC_KEYS,
+    MeasurementFailure,
     build_report,
     evaluate_budgets,
     gate_evidence_is_private,
     prepare_project,
     regression_passed,
+    require_turn,
     source_snapshot,
     summarize_flow,
     task5_host_command,
@@ -20,6 +22,18 @@ from scripts.run_efficiency_measurements import (
 
 
 class Task5MeasurementTests(unittest.TestCase):
+    def test_turn_sequence_failure_reports_only_expected_and_actual_tools(self) -> None:
+        with self.assertRaisesRegex(
+            MeasurementFailure,
+            r'quick_gate_unexpected_mcp_sequence:expected=\["project_status","gate_run"\],actual=\["project_status"\]',
+        ):
+            require_turn(
+                {"tools": ["project_status"], "edited": False},
+                tools=["project_status", "gate_run"],
+                edited=False,
+                label="quick_gate",
+            )
+
     def test_source_snapshot_excludes_workflow_state_and_bytecode(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             project = Path(root)

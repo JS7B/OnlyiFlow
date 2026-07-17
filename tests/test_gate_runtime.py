@@ -235,6 +235,7 @@ timeout_seconds = 10
         self.assertEqual(args[0][0], sys.executable)
         self.assertEqual(kwargs["cwd"], self.project_root.resolve())
         self.assertFalse(kwargs["shell"])
+        self.assertIs(kwargs["stdin"], subprocess.DEVNULL)
         self.assertIs(kwargs["stdout"], subprocess.DEVNULL)
         self.assertIs(kwargs["stderr"], subprocess.DEVNULL)
         self.assertEqual(kwargs["timeout"], 10)

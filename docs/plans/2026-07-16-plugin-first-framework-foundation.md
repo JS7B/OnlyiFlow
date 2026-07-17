@@ -2,7 +2,7 @@
 
 Date: 2026-07-16
 
-Status: Tasks 1 through 4 complete; Task 5 in progress, live measurement paused for stable network
+Status: Tasks 1 through 5 complete; Task 6 not started
 
 ## Goal
 
@@ -14,9 +14,9 @@ configuration, observe Agent lifecycles, or recreate a mandatory development met
 
 ## Binding Decisions
 
-1. `D:\AgentX\OnlyiFlow_next` is the only implementation repository.
-2. `D:\AgentX\OnlyiFlow` is read-only reference material. No merge, cherry-pick, or directory copy
-   is allowed.
+1. `E:\onlyiflow` is the only implementation repository on the current host.
+2. `D:\AgentX\OnlyiFlow` is the historical old-host reference location. No merge, cherry-pick, or
+   directory copy from that material is allowed.
 3. The repository is the source root; tested, isolated host candidates are the install roots.
 4. The first portable product contains one Skill and one local MCP server.
 5. The MCP surface contains exactly seven tools.
@@ -259,7 +259,7 @@ Local checkpoint on 2026-07-16:
 - the system plugin-creator validator still assumes a wrapped `.mcp.json` shape and is not used to
   override the direct server map proven by the real Codex lifecycle and evaluation report.
 
-## Task 5: Measure Efficiency And Gate Value
+## Task 5: Measure Efficiency And Gate Value — Complete
 
 For representative quick and standard flows record only:
 
@@ -290,7 +290,7 @@ Checkpoint on 2026-07-17:
 - each representative flow verifies host-owned ordinary implementation, intentional regression
   injection, failed Gate evidence, ordinary repair, passing Gate, and owner-controlled landing;
 - reports persist only the six approved metric groups plus acceptance booleans and cleanup status;
-- the focused Task 5 suite passes all six tests, including Windows CLI argument and temporary
+- the focused Task 5 suite passes all seven tests, including Windows CLI argument and temporary
   cleanup regressions plus the deterministic failing-then-passing Gate fixture;
 - live Claude and Codex runs were interrupted by the unstable model connection and then stopped at
   the owner's request; no partial report is accepted;
@@ -298,6 +298,29 @@ Checkpoint on 2026-07-17:
   verified absent;
 - exact continuation commands and the remaining Gate diagnostic are recorded in
   `docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`.
+
+New-machine completion on 2026-07-17:
+
+- the declared FastMCP 3.4.4 runtime was restored with owner approval;
+- the Windows CLI resolver now supports verified native Claude and Codex Desktop installations
+  while retaining npm fallbacks;
+- an initial bare Claude probe was invalid for the configured GLM provider because it bypassed the
+  normal provider settings; the corrected provider-aware probe used an empty tool list and strict
+  empty MCP configuration, then failed without a marker after 186.082 seconds;
+- after the owner selected `glm-5.2`, Claude returned the exact fixed marker in 20.574 seconds; an
+  isolated Codex `gpt-5.6-sol` probe returned its exact marker in 6.268 seconds with no tool event;
+- a resumed Claude run exposed inherited MCP stdin as the cause of a passing Gate timing out; a
+  failing contract assertion led to closing Gate stdin, after which Claude passed;
+- Codex then exposed a missing stop boundary after a managed start; a failing Skill contract led to
+  an explicit report-and-stop rule before host-owned implementation, without changing the Skill
+  description or consuming another description revision;
+- accepted reports are `build/task5-measurement-results/claude-20260717T042226Z.json` and
+  `build/task5-measurement-results/codex-20260717T045117Z.json`; both pass all eight budgets, every
+  measurement, and regression with `cleanup_errors = []`;
+- the final complete suite passes 59/59, the Codex Skill validator, Claude plugin validator, and
+  `git diff --check` pass, and the active candidate contains 40 files;
+- the Codex plugin, marketplace, cache, Task 5 workspaces, controller directories, measurement
+  processes, and MCP processes are absent. Task 6 was not started.
 
 ## Task 6: Three-Host Release Smoke
 

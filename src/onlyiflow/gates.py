@@ -102,6 +102,7 @@ def run_gate_check(check: GateCheck, project_root: Path) -> dict:
             check.command,
             cwd=project_root,
             shell=False,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=check.timeout_seconds,

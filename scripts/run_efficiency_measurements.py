@@ -308,7 +308,11 @@ def require_turn(
     label: str,
 ) -> None:
     if turn["tools"] != tools:
-        raise MeasurementFailure(f"{label}_unexpected_mcp_sequence")
+        expected = json.dumps(tools, separators=(",", ":"))
+        actual = json.dumps(turn["tools"], separators=(",", ":"))
+        raise MeasurementFailure(
+            f"{label}_unexpected_mcp_sequence:expected={expected},actual={actual}"
+        )
     if turn["edited"] is not edited:
         raise MeasurementFailure(f"{label}_unexpected_edit_state")
 
