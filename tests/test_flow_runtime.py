@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 from onlyiflow.runtime import Runtime
 
@@ -45,9 +45,7 @@ class FlowRuntimeTests(unittest.TestCase):
             status["next_action"],
             {"tool": "gate_run", "reason_code": "implementation_active"},
         )
-        self.assert_events(
-            [(flow["id"], "flow_started", None, "implementing")]
-        )
+        self.assert_events([(flow["id"], "flow_started", None, "implementing")])
 
     def test_standard_and_deep_flows_start_draft(self) -> None:
         for risk in ["standard", "deep"]:
@@ -132,7 +130,9 @@ class FlowRuntimeTests(unittest.TestCase):
         self.assertEqual(self.flow_count(), 1)
         self.assertEqual(self.event_count("flow_started"), 1)
 
-    def test_standard_spec_moves_flow_to_ready_and_writes_compact_artifact(self) -> None:
+    def test_standard_spec_moves_flow_to_ready_and_writes_compact_artifact(
+        self,
+    ) -> None:
         flow = self.start_standard()
 
         result = self.runtime.spec_submit(

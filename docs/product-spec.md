@@ -2,7 +2,7 @@
 
 Date: 2026-07-16
 
-Status: deterministic runtime and Skill implemented; Claude evaluation passed, Codex pending
+Status: Normative specification for the OnlyiFlow 0.1.0 release candidate
 
 ## Product Definition
 
@@ -221,7 +221,7 @@ adapter lifecycle tool is exposed.
 ## Release Boundary
 
 Codex and Claude Code loader behavior may be automated during development. ZCode release acceptance
-is owner-assisted: the owner imports the local folder or marketplace through ZCode Desktop, then
-runs the shared smoke contract.
+is owner-assisted: the owner imports the generated local marketplace through ZCode Desktop, runs
+the shared smoke contract, and removes the installed plugin.
 
 No release claim is allowed until all three hosts pass the same Skill and MCP behavior.

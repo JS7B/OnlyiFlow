@@ -10,7 +10,7 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 from onlyiflow.runtime import Runtime
 
@@ -111,7 +111,9 @@ class GateRuntimeTests(unittest.TestCase):
         )
         status = self.runtime.project_status(str(self.project_root))
         self.assertEqual(status["data"]["latest_gate"]["passed"], True)
-        self.assertEqual(status["data"]["latest_gate"]["checks"], result["data"]["checks"])
+        self.assertEqual(
+            status["data"]["latest_gate"]["checks"], result["data"]["checks"]
+        )
         self.assertEqual(self.flow_state(), "gate_passed")
 
     def test_failed_gate_can_be_retried_after_implementation_fix(self) -> None:
@@ -167,9 +169,7 @@ class GateRuntimeTests(unittest.TestCase):
     def test_gate_requires_valid_nonempty_configuration_and_implementing_flow(
         self,
     ) -> None:
-        missing_checks = self.runtime.gate_run(
-            str(self.project_root), self.flow["id"]
-        )
+        missing_checks = self.runtime.gate_run(str(self.project_root), self.flow["id"])
         self.assert_error(missing_checks, "gate_checks_missing")
 
         self.config.write_text(
@@ -184,9 +184,7 @@ timeout_seconds = 10
             + "\n",
             encoding="utf-8",
         )
-        invalid_config = self.runtime.gate_run(
-            str(self.project_root), self.flow["id"]
-        )
+        invalid_config = self.runtime.gate_run(str(self.project_root), self.flow["id"])
         self.assert_error(invalid_config, "gate_config_invalid")
 
         other_project = self.new_managed_project("draft project")
@@ -253,9 +251,7 @@ timeout_seconds = 10
                 "passed"
             ]
         )
-        result = self.runtime.landing_request(
-            str(self.project_root), self.flow["id"]
-        )
+        result = self.runtime.landing_request(str(self.project_root), self.flow["id"])
 
         self.assertTrue(result["ok"])
         self.assertEqual(
@@ -362,9 +358,7 @@ timeout_seconds = 10
 
     def assert_database_has_no_raw_command_data(self, secret: str) -> None:
         with closing(sqlite3.connect(self.database)) as connection:
-            columns = {
-                row[1] for row in connection.execute("PRAGMA table_info(gates)")
-            }
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(gates)")}
             values = connection.execute(
                 """
                 SELECT check_id, reason_code
@@ -377,9 +371,7 @@ timeout_seconds = 10
         self.assertNotIn("stderr", columns)
         self.assertNotIn(secret, json.dumps(values))
 
-    def assert_events(
-        self, expected: list[tuple[str, str | None, str | None]]
-    ) -> None:
+    def assert_events(self, expected: list[tuple[str, str | None, str | None]]) -> None:
         with closing(sqlite3.connect(self.database)) as connection:
             events = connection.execute(
                 """

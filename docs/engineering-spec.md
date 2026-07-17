@@ -2,15 +2,13 @@
 
 Date: 2026-07-16
 
-Status: Tasks 1 through 4 complete; Task 5 measurement implementation complete, live evidence pending
+Status: Normative engineering specification for the OnlyiFlow 0.1.0 release candidate
 
 ## Greenfield Rule
 
-This repository starts from an empty implementation boundary.
-
-`D:\AgentX\OnlyiFlow` may be read to understand prior failures and stable domain ideas, but it is
-not a source branch. Do not merge it, cherry-pick it, copy its package directories, or preserve its
-unreleased APIs.
+This repository is the only authoritative implementation source. Any legacy repository outside
+this source tree is reference material only: do not merge it, cherry-pick it, copy its package
+directories, or preserve its unreleased APIs.
 
 Ideas that may be independently reimplemented after tests justify them:
 
@@ -40,7 +38,7 @@ therefore produces duplicate Skill and MCP exposure.
 Keep the semantic runtime in one source tree and generate isolated host package roots:
 
 ```text
-OnlyiFlow_next/
+OnlyiFlow/
   .codex-plugin/plugin.json
   .claude-plugin/plugin.json
   .zcode-plugin/plugin.json
@@ -66,20 +64,7 @@ platform-specific business rules.
 
 ## Runtime Layout
 
-Task 2 established the historical minimum skeleton:
-
-```text
-src/onlyiflow/
-  __init__.py
-  mcp_server.py
-server/
-  stdio.py
-```
-
-At that checkpoint `mcp_server.py` registered an empty `FastMCP` server. Task 3 then added each
-workflow tool through a failing test.
-
-The current Task 3 runtime is:
+The runtime layout is:
 
 ```text
 src/onlyiflow/
@@ -116,13 +101,10 @@ justify the split.
   `fastmcp>=3.4,<4`.
 - No dependency installation occurs from the Skill, MCP server, launcher, or plugin lifecycle.
 - The selected interpreter and dependency availability are loader acceptance facts, not assumptions.
-- The loader spike must use the exact final launcher and successfully import the real runtime plus
-  every declared third-party dependency.
-- A fixed standalone `ping` that bypasses the real import path is not sufficient evidence.
-
-The owner-approved `myself` environment remains the interpreter source. Task 2 was verified with
-Python 3.12 and the already-installed FastMCP 3.4 family. No absolute interpreter path or dependency
-installation was added.
+- Loader acceptance uses the final launcher and imports the real runtime plus every declared
+  third-party dependency; a standalone probe that bypasses this path is insufficient.
+- The interpreter is supplied by the owner-approved `myself` environment. No launcher embeds an
+  absolute interpreter path or installs a dependency.
 
 ## Project Root Contract
 
@@ -253,7 +235,7 @@ MCP results provide the same object as structured content and as serialized JSON
 domain failures set the MCP tool-execution error signal while preserving the structured error
 object.
 
-The verified FastMCP 3.4.4 environment supports this directly through
+The supported FastMCP 3.4 release line provides this through
 `ToolResult(content=..., structured_content=..., is_error=...)`. Use that explicit result type for
 the transport boundary; do not raise a text-only exception for a structured domain failure.
 
@@ -322,10 +304,9 @@ Use the documented `.codex-plugin/plugin.json`, Codex-only root `skills/`, and b
 configuration inside the generated Codex marketplace candidate.
 The installed Skill is explicitly invoked as `$onlyiflow:onlyiflow`; the unqualified plugin-local
 name is not release evidence.
-Local development may use one disposable owner-approved local marketplace entry. The test must
-prove that Codex runs the installed cache copy. Current public documentation does not explicitly
-promise plugin-root variable substitution in MCP configuration, so the launcher must first prove
-plugin-relative `cwd` and arguments and must not embed a versioned cache path.
+Local verification may use one temporary owner-approved marketplace entry. Verification must prove
+that Codex runs the installed cache copy. The launcher uses verified plugin-relative `cwd` and
+arguments and must not embed a versioned cache path.
 
 ### Claude Code
 
@@ -337,11 +318,12 @@ The current explicit command is `/onlyiflow:onlyiflow`.
 
 ### ZCode
 
-Treat Desktop folder/marketplace import as authoritative. A locally observed
-`.zcode-plugin/plugin.json` candidate may be prepared, but its acceptance is owner-assisted and
-must be proven through the ZCode UI. The embedded CLI is a read-only/preflight aid unless the owner
-authorizes a lifecycle mutation. Give the owner the generated ZCode-only root, never the source
-repository root.
+Treat Desktop marketplace import as authoritative. The generated `build/loader-candidates/zcode/`
+root contains `marketplace.json` and one self-contained `onlyiflow/` plugin. Release acceptance
+requires import, Skill/MCP exposure, the shared behavioral smoke, plugin removal, and cleanup. The
+embedded CLI remains a read-only preflight aid unless the owner authorizes lifecycle mutation. Give
+the owner the generated marketplace root, never the source repository root or its single plugin
+subdirectory.
 
 ## Testing Boundary
 
@@ -362,6 +344,7 @@ Implementation uses tests first. Required suites include:
 
 No unit test uses a real model, user credential, user-level plugin mutation, or network call.
 
-Task 3 automated acceptance covers the transition, initialization, concurrency, schema, copied
-stdio, malformed-input, gate, privacy, and landing contracts. Skill prompt evaluations, live
-enabled/disabled host behavior, and owner-assisted ZCode import remain later task gates.
+Release evidence covers transitions, initialization, concurrency, schemas, copied stdio runtime,
+malformed input, Gate privacy, landing, enabled/disabled Skill behavior, efficiency budgets,
+configured Gate value, and all three host lifecycles. Historical execution details belong in
+`docs/evaluations/`, not in this normative specification.

@@ -35,11 +35,7 @@ class ProjectPaths:
         )
 
     def is_managed(self) -> bool:
-        return (
-            self.database.is_file()
-            and self.config.is_file()
-            and self.specs.is_dir()
-        )
+        return self.database.is_file() and self.config.is_file() and self.specs.is_dir()
 
 
 def resolve_project_root(project_root: str) -> ProjectPaths:

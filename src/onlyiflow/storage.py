@@ -166,9 +166,7 @@ class ProjectStore:
         ]
         return {
             "flow_id": latest["flow_id"],
-            "passed": all(
-                check["passed"] for check in checks if check["required"]
-            ),
+            "passed": all(check["passed"] for check in checks if check["required"]),
             "checks": checks,
         }
 
@@ -388,9 +386,7 @@ class ProjectStore:
             """
         ).fetchone()
 
-    def _flow(
-        self, connection: sqlite3.Connection, flow_id: str
-    ) -> sqlite3.Row | None:
+    def _flow(self, connection: sqlite3.Connection, flow_id: str) -> sqlite3.Row | None:
         return connection.execute(
             """
             SELECT id, risk, title, state, created_at, updated_at

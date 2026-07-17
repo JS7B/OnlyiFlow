@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import signal
+import subprocess
 import tempfile
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 from scripts.run_skill_evaluations import (
     CLAUDE_TOOLS,
@@ -17,16 +20,73 @@ from scripts.run_skill_evaluations import (
     called_tools,
     claude_command,
     cli_prefix,
+    cleanup_evaluation_workspace,
     codex_command,
     codex_skill_prompt,
     evaluate_case,
     event_types,
     prepare_project,
     run_process,
+    terminate_process_tree,
 )
 
 
 class SkillEvaluationRunnerTests(unittest.TestCase):
+    def test_workspace_cleanup_retries_transient_windows_lock(self) -> None:
+        locked = PermissionError("directory is temporarily in use")
+        with (
+            patch(
+                "scripts.run_skill_evaluations.shutil.rmtree",
+                side_effect=[locked, locked, None],
+            ) as remove_tree,
+            patch("scripts.run_skill_evaluations.time.sleep") as sleep,
+        ):
+            error = cleanup_evaluation_workspace(
+                Path("evaluation-workspace"), attempts=3, delay_seconds=0.1
+            )
+
+        self.assertIsNone(error)
+        self.assertEqual(remove_tree.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_workspace_cleanup_reports_a_bounded_failure(self) -> None:
+        with (
+            patch(
+                "scripts.run_skill_evaluations.shutil.rmtree",
+                side_effect=PermissionError("directory remains in use"),
+            ) as remove_tree,
+            patch("scripts.run_skill_evaluations.time.sleep") as sleep,
+        ):
+            error = cleanup_evaluation_workspace(
+                Path("evaluation-workspace"), attempts=3, delay_seconds=0.1
+            )
+
+        self.assertEqual(
+            error,
+            "evaluation_workspace_cleanup_failed:PermissionError",
+        )
+        self.assertEqual(remove_tree.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_workspace_cleanup_reports_windows_error_code(self) -> None:
+        locked = PermissionError("directory remains in use")
+        locked.winerror = 32
+        with (
+            patch(
+                "scripts.run_skill_evaluations.shutil.rmtree",
+                side_effect=locked,
+            ),
+            patch("scripts.run_skill_evaluations.time.sleep"),
+        ):
+            error = cleanup_evaluation_workspace(
+                Path("evaluation-workspace"), attempts=1, delay_seconds=0.1
+            )
+
+        self.assertEqual(
+            error,
+            "evaluation_workspace_cleanup_failed:PermissionError:winerror_32",
+        )
+
     def test_event_types_are_compact_and_content_free(self) -> None:
         output = "\n".join(
             [
@@ -56,11 +116,7 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as root:
                     project = Path(root) / setup
                     snapshot = prepare_project(project, setup)
-                state = (
-                    snapshot["flows"][-1]["state"]
-                    if snapshot["flows"]
-                    else None
-                )
+                state = snapshot["flows"][-1]["state"] if snapshot["flows"] else None
                 self.assertEqual(
                     (
                         snapshot["managed"],
@@ -105,7 +161,9 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
         self.assertEqual(status, "passed")
         self.assertEqual(reasons, [])
 
-    def test_enabled_explicit_case_rejects_state_mutation_without_mcp_calls(self) -> None:
+    def test_enabled_explicit_case_rejects_state_mutation_without_mcp_calls(
+        self,
+    ) -> None:
         case = {
             "expected_state": "implementing",
             "expected_specs": 0,
@@ -205,7 +263,9 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
         self.assertEqual(status, "infrastructure_error")
         self.assertEqual(reasons, ["host_model_or_network_unavailable"])
 
-    def test_enabled_host_without_project_status_is_infrastructure_failure(self) -> None:
+    def test_enabled_host_without_project_status_is_infrastructure_failure(
+        self,
+    ) -> None:
         snapshot = {
             "managed": True,
             "flows": [],
@@ -231,6 +291,38 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
                 "expected_gate_runs": 0,
                 "expected_tools": ["project_status", "flow_start"],
             },
+            enabled=True,
+            before=snapshot,
+            after=snapshot,
+            process=process,
+        )
+
+        self.assertEqual(status, "infrastructure_error")
+        self.assertEqual(reasons, ["enabled_host_tools_unavailable"])
+
+    def test_chinese_project_status_unavailable_is_infrastructure_failure(
+        self,
+    ) -> None:
+        snapshot = {
+            "managed": True,
+            "flows": [],
+            "specs": 0,
+            "gate_runs": 0,
+            "events": 0,
+        }
+        process = ProcessResult(
+            returncode=0,
+            stdout=(
+                '{"type":"item.completed","item":{"type":"agent_message",'
+                '"text":"project_status 工作流工具未在本会话中暴露。"}}'
+            ),
+            stderr="",
+            duration_seconds=1.0,
+        )
+
+        status, reasons, _ = evaluate_case(
+            group="deep",
+            case={},
             enabled=True,
             before=snapshot,
             after=snapshot,
@@ -325,6 +417,17 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
         self.assertTrue(result.timed_out)
         self.assertIsNone(result.returncode)
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows taskkill fallback")
+    def test_process_tree_termination_survives_taskkill_timeout(self) -> None:
+        timeout = subprocess.TimeoutExpired(["taskkill.exe"], 15)
+        with (
+            patch("scripts.run_skill_evaluations.subprocess.run", side_effect=timeout),
+            patch("scripts.run_skill_evaluations.os.kill") as kill,
+        ):
+            terminate_process_tree(12345)
+
+        kill.assert_called_once_with(12345, signal.SIGTERM)
+
     def test_run_process_closes_standard_input(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             result = run_process(
@@ -383,7 +486,7 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
             codex_enabled_config,
         )
         self.assertIn(
-            'plugins.onlyiflow.mcp_servers.onlyiflow.'
+            "plugins.onlyiflow.mcp_servers.onlyiflow."
             'default_tools_approval_mode="approve"',
             codex_enabled_config,
         )
@@ -430,8 +533,7 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
 
         self.assertEqual(
             prompt,
-            "[$onlyiflow:onlyiflow](C:/cache/onlyiflow/SKILL.md) "
-            "start a quick flow.",
+            "[$onlyiflow:onlyiflow](C:/cache/onlyiflow/SKILL.md) start a quick flow.",
         )
 
     def success(self) -> ProcessResult:

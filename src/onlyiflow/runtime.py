@@ -182,9 +182,7 @@ class Runtime:
         store.require_gate_runnable(normalized_flow_id)
         checks = load_gate_checks(store.paths.config)
         evidence = run_gate_checks(checks, store.paths.root)
-        passed = all(
-            check["passed"] for check in evidence if check["required"]
-        )
+        passed = all(check["passed"] for check in evidence if check["required"])
         state = "gate_passed" if passed else "implementing"
         store.record_gate(
             flow_id=normalized_flow_id,

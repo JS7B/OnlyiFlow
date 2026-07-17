@@ -2,20 +2,21 @@
 
 Date: 2026-07-16
 
-Status: Task 1 complete; Codex and Claude verified; ZCode structural preflight complete
+Status: Task 1 complete; Task 6 live loader gate verified on Codex, Claude Code, and ZCode
 
 ## Purpose
 
-Prove how one repository source can build host-isolated plugins that expose the same manual Skill
-and local stdio MCP server in Codex, Claude Code, and ZCode before workflow features are built.
+Record how one repository source builds host-isolated plugins that expose the same manual Skill
+and local stdio MCP server in Codex, Claude Code, and ZCode. The original loader questions are now
+resolved by Tasks 1 through 6; this document preserves the verified launcher contract.
 
 This contract prevents a standalone `ping` success from being mistaken for proof that the real
 Python runtime, dependencies, project root, or copied plugin can work.
 
 ## Public-Contract Freeze On 2026-07-16
 
-The bounded web research is complete. More general research is not a prerequisite for the loader
-spike. Remaining uncertainty is deliberately converted into runtime probes.
+The bounded web research is complete. Every release-relevant loader uncertainty was converted into
+a runtime or owner-assisted probe and is resolved below.
 
 | Surface | Documented result | Consequence |
 | --- | --- | --- |
@@ -39,24 +40,27 @@ Primary references:
 - https://gofastmcp.com/deployment/running-server
 - https://gofastmcp.com/servers/tools
 
-Local read-only inspection also confirmed FastMCP 3.4.3 in the `myself` environment. Its
+Local read-only inspection confirmed FastMCP 3.4.4 in the `myself` environment. Its
 `ToolResult` accepts `content`, `structured_content`, `meta`, and `is_error`, so the shared success
 and structured-domain-error contract is implementable without replacing FastMCP or dropping MCP
 error semantics.
 
-### Frozen Launcher Strategy
+### Verified Launcher Instructions
 
 Use one real entry point, `server/stdio.py`. After the host locates that file, the entry point must
 derive its plugin root from its own resolved file path, prepend the bundled `src` directory, and
 import the real package. Business code must never depend on process current directory.
 
-Host configuration may differ only in how it locates the same entry point:
+Host configuration differs only in how it locates the same entry point:
 
-- Claude uses the documented `${CLAUDE_PLUGIN_ROOT}` substitution.
-- Codex first tests plugin-root-relative `cwd` and arguments from the installed cache; absence of a
-  documented MCP root variable is a probe result, not a reason to introduce an adapter.
-- ZCode uses only the smallest candidate supported by the locally observed official manifest and
-  is not called compatible until the owner-assisted UI gate passes.
+- Codex loads `build/loader-candidates/codex-marketplace/` as a local marketplace, copies
+  `onlyiflow` into its cache, and resolves `cwd: "."` plus `./server/stdio.py` from that copied
+  plugin root. Explicit invocation is `$onlyiflow:onlyiflow`.
+- Claude Code loads `build/loader-candidates/claude/onlyiflow/` with `--plugin-dir`, resolves the
+  entry point through `${CLAUDE_PLUGIN_ROOT}`, and invokes `/onlyiflow:onlyiflow`.
+- ZCode Desktop imports `build/loader-candidates/zcode/` as a local marketplace. Its root
+  `marketplace.json` points to `./onlyiflow`, whose manifest resolves the entry point through
+  `${ZCODE_PLUGIN_ROOT}`. Task 6 owner verification proved the same Skill and seven-tool runtime.
 
 Task 1 selected `conda run --no-capture-output -n myself python -s` from already-installed tools.
 The `-s` flag prevents user-site fallback; runtime probes confirmed that FastMCP and Pydantic load
@@ -95,7 +99,7 @@ Codex and Claude disposable development loading may be automated only through do
 surfaces. ZCode plugin import, enable, disable, and removal remain owner-controlled unless the owner
 later authorizes CLI mutation.
 
-## Candidate Artifact
+## Verified Candidate Artifact
 
 The source builds three disposable, allowlisted candidates:
 
@@ -104,47 +108,45 @@ generated host root
   one host manifest/configuration family
   one host-appropriate skills root
   server/stdio.py
-  src/onlyiflow_smoke/
+  src/onlyiflow/
 ```
 
 The repository root is deliberately not imported. Claude live proof showed that a universal source
 tree duplicates root `skills/` and project `.mcp.json` alongside manifest-declared resources.
 
-The Skill returns a fixed marker only when explicitly invoked.
+The current candidates contain 41 files, reproduce byte-for-byte, and expose the same explicit-only
+Skill plus exactly these seven tools:
 
-The server exposes exactly:
+```text
+project_status
+project_init
+flow_start
+spec_submit
+flow_claim
+gate_run
+landing_request
+```
 
-| Tool | Purpose |
-| --- | --- |
-| `ping` | Prove initialize, tools/list, and tools/call. |
-| `project_echo` | Return a normalized project basename, never an external absolute path. |
-| `runtime_probe` | Import the exact future runtime package and every declared dependency, then return sanitized version families. |
+The copied candidates execute the real `onlyiflow` package and declared FastMCP dependency through
+the final interpreter and entry point; no smoke-only package remains.
 
-`runtime_probe` must execute through the same interpreter, launcher, plugin-root resolution, and
-copied package layout proposed for the real server.
+## Shared Release Gate
 
-## Shared Protocol Gate
+Every host passed the current release gate in a disposable Git project whose path contains spaces:
 
-For every host tested:
+1. load the generated host candidate and expose one manual Skill plus seven tools;
+2. answer an ordinary prompt with no OnlyiFlow activity;
+3. explicitly inspect an unmanaged project without creating state;
+4. initialize only in a new owner-confirmation turn;
+5. start a quick flow at `implementing` with no spec;
+6. leave implementation to the ordinary host agent;
+7. record one failing and one passing configured Gate;
+8. request landing and reach `waiting_owner`;
+9. unload the plugin and confirm Skill/tool disappearance; and
+10. remove temporary lifecycle state and runtime processes without retaining model content.
 
-1. Record host version and selected surface.
-2. Load the candidate using a documented or owner-approved local path.
-3. Confirm the Skill is discoverable.
-4. Confirm an ordinary small coding prompt does not invoke it.
-5. Explicitly invoke the Skill and observe the fixed marker.
-6. Start the MCP server.
-7. Complete `initialize`.
-8. Complete `tools/list` with the exact three tools.
-9. Call `ping`.
-10. Call `project_echo` from a project whose path contains spaces.
-11. Call `runtime_probe` through the final import path.
-12. Disable or unload the candidate through the host-owned lifecycle.
-13. Confirm the Skill and tools are no longer exposed.
-14. Record cleanup without retaining model content.
-
-Codex and Claude must pass this gate before workflow runtime implementation. ZCode must pass the
-structural/preflight portion before implementation and the owner-assisted live portion before
-release.
+Claude and Codex are automated by `scripts/run_release_smoke.py`. ZCode uses the same behavioral
+contract through the owner-controlled Desktop lifecycle.
 
 ## Codex Contract
 
@@ -156,20 +158,14 @@ skills/
 .mcp.json or a manifest-referenced MCP file
 ```
 
-Research questions:
+Verified behavior:
 
-- What documented local marketplace or development path loads the generated candidate root?
-- Does the host copy the plugin or use it in place?
-- What variable or working directory identifies the copied plugin root?
-- What project-root fact is available to the Skill and server?
-- Can the selected `myself` Python interpreter be invoked with paths containing spaces?
-- Does MCP approval policy prevent `ping` until the owner approves it?
-- Does unload/remove eliminate both Skill and MCP exposure?
-
-Codex accepted a disposable local marketplace and copied version `0.0.1` into its real plugin
-cache. `cwd: "."` and `./server/stdio.py` resolved from that cache, and the exact three-tool protocol
-passed there. Fresh-session Skill non-trigger, explicit invocation, and unload still require a new
-Codex task because nested `codex exec` produced no model events in the active Desktop task.
+- `plugin marketplace add <codex-marketplace-root>` loads the local marketplace;
+- `plugin add onlyiflow@onlyiflow-dev` copies version 0.1.0 into the real plugin cache;
+- `cwd: "."` and `./server/stdio.py` resolve from that cache with paths containing spaces;
+- a fresh task exposes `$onlyiflow:onlyiflow` and all seven MCP tools;
+- lifecycle changes require a new task before model-visible exposure changes; and
+- plugin then marketplace removal eliminates Skill, MCP, cache, and runtime exposure.
 
 Allowed mutation: one disposable owner-approved local marketplace entry that is removed after the
 spike. Do not edit Codex configuration files directly.
@@ -189,14 +185,14 @@ skills-claude/
 .mcp.claude.json
 ```
 
-Required behavior:
+Verified behavior:
 
 - load with `claude --plugin-dir <generated-claude-root>`;
-- set `disable-model-invocation: true` on the smoke Skill;
+- set `disable-model-invocation: true` on the manual Skill;
 - resolve bundled files through documented plugin-root substitution;
 - use plugin-owned MCP configuration;
 - never call `claude mcp add`;
-- prove reload/unload behavior without modifying unrelated user configuration.
+- unload by ending the session without modifying unrelated user configuration.
 
 Public references:
 
@@ -237,6 +233,25 @@ Public references:
 These local observations are not treated as a stable public standard. They authorize a disposable
 candidate for owner testing, not an unattended installer or compatibility claim.
 
+### Task 6 Current-Host Observations On 2026-07-17
+
+The replacement machine differs from the original research host:
+
+| Fact | Evidence level | Value |
+| --- | --- | --- |
+| Desktop installation | `locally_observed` | ZCode 3.3.1 |
+| Embedded CLI | `locally_observed` | `D:\Zcode\resources\glm\zcode.cjs` |
+| CLI version | `locally_observed` | 0.15.0 |
+| Marketplace directory contract | `runtime_verified` | Add Marketplace requires root `marketplace.json` or `.claude-plugin/marketplace.json`; a lone `.zcode-plugin/plugin.json` is rejected |
+| Plugin load | `owner_verified` | Local marketplace installation exposed the manual Skill and OnlyiFlow MCP server |
+| Plugin unload | `owner_verified` | Plugin, Skill, and MCP exposure disappeared after owner removal |
+| Marketplace retention | `locally_observed` | ZCode retained the owner-added local source and shows an uninstalled `获取` card; no visible removal control was found |
+| Runtime cleanup | `locally_observed` | Uninstall left six orphaned OnlyiFlow MCP processes, which were terminated by exact command-line match |
+
+The builder therefore emits `build/loader-candidates/zcode/marketplace.json` with one local source
+entry for `./onlyiflow`. This is a packaging difference only; the plugin's Skill, seven-tool
+runtime, and workflow semantics remain shared.
+
 ### Development Boundary
 
 Automation may:
@@ -254,46 +269,47 @@ Automation must not, without later authorization:
 - remove the plugin;
 - edit `.zcode` user or workspace configuration.
 
-### Owner-Assisted Gate
+### Verified Owner-Assisted Lifecycle
 
-When the Codex checkpoint is complete, provide `build/loader-candidates/zcode/onlyiflow/` to the
-owner. The owner:
+Task 6 provided `build/loader-candidates/zcode/` to the owner as a local marketplace root. Its
+`marketplace.json` points to the self-contained `onlyiflow/` plugin. The owner:
 
 1. opens ZCode Plugin Management;
-2. adds the local directory or local marketplace;
+2. adds that local marketplace root;
 3. installs/enables the candidate;
 4. confirms the Skill and MCP server are listed;
-5. runs the shared non-trigger, explicit-trigger, `ping`, `project_echo`, and `runtime_probe` smoke;
+5. ran the shared ordinary-isolation, initialization, quick-flow, Gate, and landing smoke;
 6. disables or removes the candidate;
 7. confirms both Skill and MCP exposure disappear.
 
-If this gate fails, revise ZCode packaging only. Do not add Hooks, adapters, or ZCode-specific
-workflow semantics.
+ZCode 3.3.1 retained the local marketplace as an uninstalled Discover source after step 6. The
+owner accepted that host behavior because installed plugin, Skill, MCP, cache, workspace, and
+runtime exposure were absent after cleanup.
 
 ## Exit Criteria
 
-### Recorded Evidence On 2026-07-16
+### Final Recorded Evidence Through 2026-07-17
 
 | Surface | Evidence | Result |
 | --- | --- | --- |
-| Shared package | `runtime_verified` | Seven automated checks pass, including a versioned cache-shaped path with spaces, exact three-tool order, structured/text parity, domain `is_error`, and path privacy. A clean rebuild reproduced all 22 generated files with identical SHA-256 hashes and no bytecode files. |
-| Interpreter | `runtime_verified` | Python 3.12 in `myself`; FastMCP 3.4 and Pydantic 2.12 both report environment-owned dependency sources under `python -s`. |
-| Codex cache/MCP | `runtime_verified` | CLI 0.144.4 copied version 0.0.1 to the real cache; plugin-relative cwd and all three tools passed from that cache. |
-| Codex Skill invocation | `owner_verified` | Independent fresh tasks confirmed ordinary non-trigger and the exact `ONLYIFLOW_SMOKE_SKILL_V1` response for `$onlyiflow-smoke`. |
+| Shared package | `runtime_verified` | Current candidates contain 41 files, reproduce byte-for-byte without bytecode, execute the real runtime from paths containing spaces, and expose exact seven-tool structured/text parity plus private Gate evidence. |
+| Interpreter | `runtime_verified` | Python 3.12 in `myself`; FastMCP 3.4.4 and Pydantic 2.13.4 report environment-owned dependency sources under `python -s`. |
+| Codex cache/MCP | `runtime_verified` | Desktop CLI 0.145.0-alpha.18 copied version 0.1.0 to the real cache; plugin-relative cwd and all seven tools passed from that cache. |
+| Codex Skill invocation | `runtime_verified` | The current Task 4 enabled/disabled report passes all 36 ordinary, explicit, and deep cases for `$onlyiflow:onlyiflow`. |
 | Codex unload | `owner_verified` | Plugin and marketplace removal succeeded after plugin-owned MCP subprocess cleanup; installed/available entries, MCP registration, cache, and runtime process counts are all zero. An independent fresh task confirmed both Skill and MCP exposure are absent. |
-| Claude Code | `runtime_verified` | CLI 2.1.211 passed one ordinary non-trigger, namespaced explicit Skill invocation, all three MCP calls with narrow tool allowlists, and unload from a versioned path with spaces. |
-| ZCode | `locally_observed` | Desktop 3.3.6 / CLI 0.15.2; candidate structure passes tests, read-only plugins/skills/doctor return no diagnostics, and no lifecycle mutation occurred. |
+| Claude Code | `runtime_verified` | CLI 2.1.197 passes all 36 Task 4 cases and the Task 6 ordinary, initialization, quick-flow, Gate, landing, and unload sequence from paths containing spaces. |
+| ZCode | `owner_verified` | Desktop 3.3.1 / CLI 0.15.0 on the replacement host loaded the generated local marketplace and passed ordinary isolation, explicit initialization, quick flow, failing/passing Gate, landing, and unload. Plugin, Skill, MCP exposure, and runtime processes are absent after cleanup; the owner intentionally retained only the uninstalled local marketplace source. |
 
 The source-root hypothesis is rejected. `scripts/build_loader_candidates.py` is now the packaging
 contract and produces isolated roots for all three hosts.
 
-### Pending Codex Fresh-Task Checkpoint
+### Completed Codex Fresh-Task Checkpoint
 
-The clean `onlyiflow@onlyiflow-loader-dev` lifecycle checkpoint is:
+The clean `onlyiflow@onlyiflow-dev` lifecycle checkpoint is:
 
 1. Complete: fresh task A confirmed an ordinary fixed-response prompt does not invoke OnlyiFlow.
-2. Complete: fresh task B confirmed `$onlyiflow-smoke` returns exactly
-   `ONLYIFLOW_SMOKE_SKILL_V1`.
+2. Complete: fresh tasks and current reports confirmed `$onlyiflow:onlyiflow` loads the manual
+   Skill and model-visible tools.
 3. Complete: the plugin and disposable marketplace were removed through the Codex CLI, with plugin
    entry, MCP registration, cache, and runtime process counts verified as zero.
 4. Complete: fresh task C reported `skill_available=no` and `mcp_available=no`.
@@ -301,22 +317,21 @@ The clean `onlyiflow@onlyiflow-loader-dev` lifecycle checkpoint is:
 All four observations are recorded. The generated candidate remains in the repository for
 reproducibility but is no longer installed.
 
-The independent-task requirement was necessary because an active Codex task cannot refresh plugin
-exposure mid-session. Task 1 now passes; Task 2 may begin only as a separate owner-directed goal.
+The independent-task requirement remains necessary because an active Codex task cannot refresh
+plugin exposure mid-session.
 
-### Task 1 Gate Result
+### Final Loader Result
 
 `PASS`
 
-Loader research is complete because:
+The loader contract is complete because:
 
 - Codex is `runtime_verified` with owner-verified Skill invocation and unload;
 - Claude Code is `runtime_verified`;
-- ZCode structural preflight is complete;
+- ZCode is owner-verified through live import, shared behavior, unload, and cleanup;
 - the exact selected Python/runtime strategy is recorded;
 - copied-plugin paths with spaces work;
-- no host required an OnlyiFlow Hook or direct Agent-config edit;
-- owner-assisted ZCode live verification remains scheduled as a release gate.
+- no host required an OnlyiFlow Hook or direct Agent-config edit.
 
-If the real Python runtime cannot launch in Codex or Claude, stop before workflow implementation and
-write a separate distribution decision. Do not solve the failure by rebuilding platform adapters.
+The authoritative owner instructions are now in `docs/release-guide.md`. A future host regression
+must produce a new bounded distribution decision; it must not be hidden behind platform adapters.

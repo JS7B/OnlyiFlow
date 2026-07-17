@@ -6,10 +6,10 @@ These instructions apply to the entire repository.
 
 Repository and product name: `OnlyiFlow`.
 
-This directory is a greenfield repository. `D:\AgentX\OnlyiFlow` is reference material only. Do
-not merge, cherry-pick, copy directories, or preserve APIs merely because they exist in that older
-repository. Reuse an idea only when the current product and engineering specifications explicitly
-approve it and a focused test justifies the implementation.
+This directory is a greenfield repository. Any legacy repository outside this source tree is
+reference material only. Do not merge, cherry-pick, copy directories, or preserve APIs merely
+because they exist in an older repository. Reuse an idea only when the current product and
+engineering specifications explicitly approve it and a focused test justifies the implementation.
 
 ## Owner And Environment
 
@@ -22,38 +22,20 @@ approve it and a focused test justifies the implementation.
 
 ## Current Boundary
 
-Tasks 1 through 5 are complete. Task 6 has not started and requires new owner direction.
-Current fresh-host enabled/disabled reports for both Codex and Claude pass all 36 Task 4 cases with
-no infrastructure or cleanup error. The repository currently contains:
+Version `0.1.0` is a verified release candidate. The normative product, engineering, and release
+contracts are in `docs/product-spec.md`, `docs/engineering-spec.md`, and `docs/release-guide.md`.
+The accepted reports, hashes, three-host lifecycle results, and fifteen-criterion audit are in
+`docs/evaluations/2026-07-17-task7-release-readiness.md`.
 
-- the explicit-only `onlyiflow` Skill wrappers;
-- version `0.1.0` project metadata and the bundled `src/onlyiflow/` package;
-- a transport-independent workflow runtime and an exact seven-tool FastMCP stdio server;
-- project-local SQLite persistence, compact specs, deterministic gates, and landing requests;
-- isolated host candidates for Codex, Claude Code, and ZCode;
-- loader evidence, a reproducible packaging builder, Task 3 contract tests, and the Task 4
-  10/5/3 evaluation runner;
-- a test-first Task 5 efficiency/Gate measurement runner with accepted Claude and Codex reports;
-- a tested Windows CLI resolver that keeps the proven npm entry points and falls back to verified
-  native Claude or Codex Desktop executables;
-- deterministic Gate processes that close inherited stdin, plus an explicit Skill boundary that
-  stops a managed start before host-owned implementation;
-- no installed test plugin, marketplace, MCP registration, cache, or runtime process.
+No OnlyiFlow test plugin, MCP registration, versioned plugin cache, temporary workspace, or runtime
+process may remain after verification. The owner-approved uninstalled ZCode Discover source is the
+only retained lifecycle state. A successful host listing is not model-visibility evidence; accepted
+reports must contain the expected real MCP call sequence.
 
-Task 4 acceptance evidence is
-`build/task4-evaluation-results/codex-both-20260717T014407Z.json` and
-`build/task4-evaluation-results/claude-both-20260716T195242Z.json`. Do not treat a successful
-`codex mcp list` or `codex mcp get` as proof that
-model-visible tools were injected; the evaluation report must contain the expected real
-`mcp_tool_call` sequence. Do not install or test another Codex version without explicit owner
-authorization. Do not revise the Skill description more than the one revision budget already
-recorded in the evaluation fixture.
-
-Task 5 final evidence is in
-`docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`. Accepted local reports are
-`build/task5-measurement-results/claude-20260717T042226Z.json` and
-`build/task5-measurement-results/codex-20260717T045117Z.json`; both pass every budget and
-measurement with no cleanup error. Do not start Task 6 without new owner direction.
+The validated local base is `c57ad88b38e94fbba67d6b2bd561a3feff37adec`. Live `origin/main`
+points to owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a`, which is intentionally
+excluded from this tree. Do not merge it, force-push, commit, push, release, install another Codex
+version, or start later product work without explicit owner direction.
 
 The intended first product increment is one manually invoked `onlyiflow` Skill plus one local stdio
 MCP server. It must not contain or install Hooks, subagents, commands, background monitors,
@@ -109,7 +91,7 @@ build/loader-candidates/claude/onlyiflow/
 build/loader-candidates/zcode/onlyiflow/
 ```
 
-The Task 3 runtime keeps business logic transport-independent:
+The runtime keeps business logic transport-independent:
 
 - `src/onlyiflow/domain.py`: risk levels and explicit state transitions.
 - `src/onlyiflow/contracts.py`: shared success/error and tool data contracts.
@@ -218,8 +200,9 @@ ZCode Desktop folder/marketplace import is the authoritative installation surfac
 acceptance. The locally observed embedded CLI may be used for read-only discovery and automated
 preflight, but it must not silently install, enable, disable, or remove the owner's plugins.
 
-Prepare `build/loader-candidates/zcode/onlyiflow/` for the owner. Do not ask the owner to import the
-repository source root.
+Prepare `build/loader-candidates/zcode/` as the owner-imported local marketplace root. Its
+`marketplace.json` points only to the self-contained `onlyiflow/` plugin beneath it. Do not ask the
+owner to import the single plugin directory or the repository source root.
 
 Do not treat a locally observed `.zcode-plugin/plugin.json` shape as a stable public standard. It
 may be used to build a disposable candidate only after the research contract is followed, and the

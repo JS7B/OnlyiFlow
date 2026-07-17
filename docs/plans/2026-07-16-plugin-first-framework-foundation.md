@@ -2,7 +2,8 @@
 
 Date: 2026-07-16
 
-Status: Tasks 1 through 5 complete; Task 6 not started
+Status: Tasks 1 through 6 complete; Task 7 verification and formalization complete, awaiting owner
+approval plus remote-delivery direction
 
 ## Goal
 
@@ -14,9 +15,9 @@ configuration, observe Agent lifecycles, or recreate a mandatory development met
 
 ## Binding Decisions
 
-1. `E:\onlyiflow` is the only implementation repository on the current host.
-2. `D:\AgentX\OnlyiFlow` is the historical old-host reference location. No merge, cherry-pick, or
-   directory copy from that material is allowed.
+1. The current repository is the only implementation source of truth.
+2. Any legacy repository is historical reference material only. No merge, cherry-pick, or directory
+   copy from that material is allowed.
 3. The repository is the source root; tested, isolated host candidates are the install roots.
 4. The first portable product contains one Skill and one local MCP server.
 5. The MCP surface contains exactly seven tools.
@@ -322,7 +323,7 @@ New-machine completion on 2026-07-17:
 - the Codex plugin, marketplace, cache, Task 5 workspaces, controller directories, measurement
   processes, and MCP processes are absent. Task 6 was not started.
 
-## Task 6: Three-Host Release Smoke
+## Task 6: Three-Host Release Smoke — Complete
 
 ### Automated Codex And Claude Smoke
 
@@ -339,9 +340,12 @@ In disposable Git projects with spaces in their paths:
 
 ### Owner-Assisted ZCode Smoke
 
-Provide `build/loader-candidates/zcode/onlyiflow/` and the shared smoke instructions to the owner.
-The owner imports it through ZCode Plugin Management using the local file/folder or marketplace surface,
-runs the same behavioral scenario, and removes it through ZCode.
+Provide `build/loader-candidates/zcode/` and the shared smoke instructions to the owner. The root
+contains the local `marketplace.json`; its only entry points to the self-contained `onlyiflow/`
+plugin beneath it. The owner adds that marketplace through ZCode Plugin Management, installs the
+plugin, runs the same behavioral scenario, and removes the plugin through ZCode. ZCode 3.3.1 may
+retain the owner-added marketplace as an uninstalled Discover source; acceptance requires that the
+plugin, Skill, MCP exposure, versioned plugin cache, and runtime processes are absent.
 
 Automation may inspect read-only CLI/UI-visible results after the owner action, but does not perform
 the import or lifecycle mutation.
@@ -349,7 +353,24 @@ the import or lifecycle mutation.
 **Gate:** all three hosts pass the same Skill and seven-tool semantics. Packaging may differ;
 workflow semantics may not.
 
-## Task 7: Documentation And Release Boundary
+Recorded checkpoint on 2026-07-17:
+
+- privacy-safe Claude and Codex reports pass all 11 release checks, exact shared tool sequences,
+  and lifecycle cleanup;
+- ZCode 3.3.1 required a root `marketplace.json`; a test-first builder repair added only that 41st
+  generated file and preserved every prior candidate byte;
+- the owner-assisted ZCode run passed ordinary isolation, explicit owner-confirmed initialization,
+  quick flow without a spec, host-owned implementation, failing-then-passing Gate evidence,
+  landing at `waiting_owner`, and plugin unload;
+- ZCode retained the owner-added local marketplace as an uninstalled Discover source, which the
+  owner accepted; plugin, Skill, MCP exposure, versioned cache files, and runtime processes are
+  absent;
+- six MCP processes orphaned by ZCode uninstall were terminated by exact OnlyiFlow command-line
+  match, and the locked disposable workspace was removed after ZCode closed; and
+- the final suite passes 62/62, both host validators pass, two fresh 41-file candidate builds match
+  the active candidate byte-for-byte, and no bytecode or Task 6 temporary workspace remains.
+
+## Task 7: Documentation And Release Boundary — Awaiting Owner Approval
 
 1. Replace research hypotheses with verified launcher instructions.
 2. Document the smallest owner installation path for every host.
@@ -360,6 +381,35 @@ workflow semantics may not.
    smoke suite.
 
 Release only after the owner approves the evidence and no test depends on the old repository.
+
+Verification checkpoint on 2026-07-17:
+
+- `docs/release-guide.md` records the minimum verified owner path for Codex, Claude Code, and
+  ZCode, freezes the existing Python/dependency prerequisites without install commands, and states
+  the external Git-enforcement boundary;
+- fresh Codex and Claude Task 4, Task 5, and Task 6 reports pass their complete contracts with no
+  infrastructure or cleanup error;
+- the prior full ZCode smoke plus a focused owner-assisted check of the only post-Task-6 Skill
+  change prove the current 12-file installed candidate, immediate explicit `check`, unload, and
+  cleanup behavior;
+- the final formatter, linter, 71-test suite, Codex Skill validator, Claude plugin validator, and
+  `git diff --check` pass;
+- normative specifications and package wording are formalized, while machine observations,
+  checkpoint history, and model-backed reports remain confined to the non-normative evidence
+  layer;
+- two fresh 41-file candidate builds match the active tree byte-for-byte, with no bytecode, and all
+  temporary reproduction and ZCode smoke workspaces were removed;
+- final inspection finds no installed OnlyiFlow plugin, Codex marketplace, versioned cache, Task
+  workspace, measurement process, MCP process, or Claude inline-plugin data; the owner-accepted
+  uninstalled ZCode Discover source remains; and
+- all fifteen final acceptance criteria pass in
+  `docs/evaluations/2026-07-17-task7-release-readiness.md`.
+
+The remaining action is separate owner approval to commit, push, and release. Live `origin/main`
+contains owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a`; it is deliberately not
+part of this validated tree. Delivery also requires explicit owner direction for handling that
+remote commit. No merge, corrective commit, force-push, or release is authorized by the
+verification results alone.
 
 ## Final Acceptance Criteria
 

@@ -49,6 +49,7 @@ def build_candidates(output_root: Path) -> dict[str, Path]:
             shutil.copy2(REPOSITORY_ROOT / filename, destination / filename)
 
     write_codex_marketplace(output_root / "codex-marketplace")
+    write_zcode_marketplace(output_root / "zcode")
     return roots
 
 
@@ -71,6 +72,29 @@ def write_codex_marketplace(marketplace_root: Path) -> None:
         ],
     }
     metadata.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_zcode_marketplace(marketplace_root: Path) -> None:
+    plugin = json.loads(
+        (marketplace_root / "onlyiflow/.zcode-plugin/plugin.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload = {
+        "name": "onlyiflow-dev",
+        "plugins": [
+            {
+                "name": plugin["name"],
+                "version": plugin["version"],
+                "description": plugin["description"],
+                "source": "./onlyiflow",
+            }
+        ],
+    }
+    (marketplace_root / "marketplace.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )

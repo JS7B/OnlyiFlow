@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import shutil
 import sqlite3
 import subprocess
@@ -23,14 +24,12 @@ SOURCE_ROOT = REPOSITORY_ROOT / "src"
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
-from onlyiflow.runtime import Runtime
+from onlyiflow.runtime import Runtime  # noqa: E402
 
 
 EVALUATIONS = REPOSITORY_ROOT / "tests/fixtures/skill_evaluations.json"
 RESULTS_ROOT = REPOSITORY_ROOT / "build/task4-evaluation-results"
-CODEX_MARKETPLACE = (
-    REPOSITORY_ROOT / "build/loader-candidates/codex-marketplace"
-)
+CODEX_MARKETPLACE = REPOSITORY_ROOT / "build/loader-candidates/codex-marketplace"
 CLAUDE_CANDIDATE = REPOSITORY_ROOT / "build/loader-candidates/claude/onlyiflow"
 TOOLS = (
     "project_status",
@@ -41,9 +40,7 @@ TOOLS = (
     "gate_run",
     "landing_request",
 )
-CLAUDE_TOOLS = tuple(
-    f"mcp__plugin_onlyiflow_onlyiflow__{tool}" for tool in TOOLS
-)
+CLAUDE_TOOLS = tuple(f"mcp__plugin_onlyiflow_onlyiflow__{tool}" for tool in TOOLS)
 INFRASTRUCTURE_PATTERN = re.compile(
     r"stream disconnected|sampling request|timed? out|timeout|network|"
     r"connection|overloaded|rate limit|http 5\d\d|529",
@@ -72,6 +69,29 @@ def load_evaluations() -> dict:
     return json.loads(EVALUATIONS.read_text(encoding="utf-8"))
 
 
+def cleanup_evaluation_workspace(
+    path: Path,
+    *,
+    attempts: int = 240,
+    delay_seconds: float = 0.5,
+) -> str | None:
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return None
+        except FileNotFoundError:
+            return None
+        except OSError as error:
+            if attempt == attempts - 1:
+                detail = type(error).__name__
+                winerror = getattr(error, "winerror", None)
+                if winerror is not None:
+                    detail += f":winerror_{winerror}"
+                return f"evaluation_workspace_cleanup_failed:{detail}"
+            time.sleep(delay_seconds)
+    return None
+
+
 def cli_prefix(name: str) -> list[str]:
     if os.name == "nt":
         candidates: list[list[str]] = []
@@ -98,8 +118,7 @@ def cli_prefix(name: str) -> list[str]:
                     candidates.append([node, str(script)])
             if name == "claude":
                 npm_native = (
-                    npm_root
-                    / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
+                    npm_root / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
                 )
                 if npm_native.is_file():
                     candidates.append([str(npm_native)])
@@ -149,15 +168,15 @@ def codex_command(project: Path, prompt: str, *, enabled: bool) -> list[str]:
         )
     command.extend(
         [
-        "exec",
-        "--ephemeral",
-        "--skip-git-repo-check",
-        "-s",
-        "workspace-write" if enabled else "read-only",
-        "-C",
-        str(project),
-        "--json",
-        prompt,
+            "exec",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "-s",
+            "workspace-write" if enabled else "read-only",
+            "-C",
+            str(project),
+            "--json",
+            prompt,
         ]
     )
     return command
@@ -213,9 +232,7 @@ def run_process(
         "MCP_TIMEOUT": "60000",
     }
     started = time.perf_counter()
-    creation_flags = (
-        subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-    )
+    creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
     process = subprocess.Popen(
         command,
         cwd=cwd,
@@ -251,12 +268,18 @@ def run_process(
 
 def terminate_process_tree(process_id: int) -> None:
     if os.name == "nt":
-        subprocess.run(
-            ["taskkill.exe", "/PID", str(process_id), "/T", "/F"],
-            capture_output=True,
-            check=False,
-            timeout=15,
-        )
+        try:
+            subprocess.run(
+                ["taskkill.exe", "/PID", str(process_id), "/T", "/F"],
+                capture_output=True,
+                check=False,
+                timeout=15,
+            )
+        except subprocess.TimeoutExpired:
+            try:
+                os.kill(process_id, signal.SIGTERM)
+            except OSError:
+                pass
     else:
         try:
             os.killpg(process_id, 9)
@@ -356,9 +379,7 @@ def project_snapshot(project: Path) -> dict:
         gate_runs = connection.execute(
             "SELECT COUNT(DISTINCT run_id) FROM gates"
         ).fetchone()[0]
-        events = connection.execute(
-            "SELECT COUNT(*) FROM domain_events"
-        ).fetchone()[0]
+        events = connection.execute("SELECT COUNT(*) FROM domain_events").fetchone()[0]
     return {
         "managed": True,
         "flows": flows,
@@ -484,6 +505,7 @@ def reported_project_status_unavailable(output: str) -> bool:
             "unavailable",
             "not connected",
             "not reachable",
+            "未在本会话中暴露",
             "isn't exposed",
             "isn’t exposed",
             "isn't connected",
@@ -577,11 +599,13 @@ def run_case(
     case: dict,
     enabled: bool,
     timeout_seconds: int,
+    cleanup_errors: list[str],
     codex_skill_path: Path | None = None,
 ) -> dict:
     setup = "unmanaged" if group == "ordinary" else case["setup"]
-    with tempfile.TemporaryDirectory(prefix="OnlyiFlow Task4 evaluation ") as root:
-        project = Path(root) / "project with spaces"
+    root = Path(tempfile.mkdtemp(prefix="OnlyiFlow Task4 evaluation "))
+    try:
+        project = root / "project with spaces"
         before = prepare_project(project, setup)
         prompt = case["prompt"] if group == "ordinary" else case[f"{host}_prompt"]
         if host == "codex" and enabled and group != "ordinary":
@@ -599,6 +623,10 @@ def run_case(
             timeout_seconds=timeout_seconds,
         )
         after = project_snapshot(project)
+    finally:
+        cleanup_error = cleanup_evaluation_workspace(root)
+        if cleanup_error is not None:
+            cleanup_errors.append(cleanup_error)
 
     status, reasons, evidence = evaluate_case(
         group=group,
@@ -649,9 +677,7 @@ class CodexLifecycle:
             )
         )
         self.plugin_added = True
-        self.skill_path = (
-            Path(installed["installedPath"]) / "skills/onlyiflow/SKILL.md"
-        )
+        self.skill_path = Path(installed["installedPath"]) / "skills/onlyiflow/SKILL.md"
         if not self.skill_path.is_file():
             raise RuntimeError("Installed Codex Skill path is missing.")
         return self.skill_path
@@ -699,9 +725,7 @@ class CodexLifecycle:
 
     def assert_absent(self) -> None:
         plugins = self.run([*cli_prefix("codex"), "plugin", "list", "--json"])
-        marketplaces = self.run(
-            [*cli_prefix("codex"), "plugin", "marketplace", "list"]
-        )
+        marketplaces = self.run([*cli_prefix("codex"), "plugin", "marketplace", "list"])
         if "onlyiflow@onlyiflow-dev" in plugins or "onlyiflow-dev" in marketplaces:
             raise RuntimeError(
                 "Refusing to replace an existing onlyiflow-dev Codex lifecycle."
@@ -811,6 +835,7 @@ def main() -> int:
                         case=case,
                         enabled=enabled,
                         timeout_seconds=args.timeout_seconds,
+                        cleanup_errors=cleanup_errors,
                         codex_skill_path=codex_skill_path,
                     )
                     results.append(result)
@@ -823,6 +848,8 @@ def main() -> int:
                         raise InterruptedError(
                             "Stopped after the first infrastructure error."
                         )
+                    if cleanup_errors:
+                        raise InterruptedError("Stopped after the first cleanup error.")
             if enabled and lifecycle is not None:
                 cleanup_errors.extend(lifecycle.cleanup())
                 lifecycle = CodexLifecycle()

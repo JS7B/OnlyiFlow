@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 from scripts.run_efficiency_measurements import (
     APPROVED_METRIC_KEYS,
@@ -49,9 +49,17 @@ class Task5MeasurementTests(unittest.TestCase):
 
     def test_flow_summary_counts_calls_before_first_model_edit(self) -> None:
         turns = [
-            {"duration_seconds": 1.25, "tools": ["project_status", "flow_start"], "edited": False},
+            {
+                "duration_seconds": 1.25,
+                "tools": ["project_status", "flow_start"],
+                "edited": False,
+            },
             {"duration_seconds": 2.5, "tools": [], "edited": True},
-            {"duration_seconds": 0.75, "tools": ["project_status", "gate_run"], "edited": False},
+            {
+                "duration_seconds": 0.75,
+                "tools": ["project_status", "gate_run"],
+                "edited": False,
+            },
         ]
 
         summary = summarize_flow(

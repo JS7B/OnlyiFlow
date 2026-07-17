@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "onlyiflow"
 version = "0.1.0"
-description = "Personal development-flow state and landing-evidence plugin foundation."
+description = "Explicit project-local development-flow state and deterministic landing evidence."
 requires-python = ">=3.11"
 dependencies = ["fastmcp>=3.4,<4"]
 

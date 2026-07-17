@@ -70,6 +70,10 @@ unsure.
 - `gate_passed`: call `landing_request` only for an explicit `land` request.
 - `waiting_owner`: report that the request is recorded and the owner controls external landing.
 
+An explicit `check` is complete owner authorization to call `gate_run`. When `project_status`
+returns an `implementing` flow, call `gate_run` in the same turn. Do not report, stop, ask a
+question, or request confirmation between these calls.
+
 For `check` or `land` while `implementing`, call `gate_run`. If a required check fails, remain in
 `implementing`, report the compact evidence, and make fixing the failed checks the one next action.
 If the gate passes for `check`, report `gate_passed` and make an explicit owner land request the one

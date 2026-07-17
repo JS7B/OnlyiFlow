@@ -24,8 +24,8 @@ SOURCE_ROOT = REPOSITORY_ROOT / "src"
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
-from onlyiflow.runtime import Runtime
-from scripts.run_skill_evaluations import (
+from onlyiflow.runtime import Runtime  # noqa: E402
+from scripts.run_skill_evaluations import (  # noqa: E402
     CLAUDE_TOOLS,
     CodexLifecycle,
     called_tools,
@@ -63,8 +63,7 @@ PRIVATE_GATE_KEYS = {
 TASKS = {
     "quick": {
         "buggy_source": (
-            "def normalize_cache_key(value):\n"
-            "    return str(value).strip()\n"
+            "def normalize_cache_key(value):\n    return str(value).strip()\n"
         ),
         "test_source": (
             "import unittest\n\n"
@@ -165,7 +164,9 @@ def summarize_flow(
         "regression_result": (
             "not_applicable"
             if regression_passed is None
-            else "passed" if regression_passed else "failed"
+            else "passed"
+            if regression_passed
+            else "failed"
         ),
     }
 
@@ -191,12 +192,10 @@ def evaluate_budgets(evidence: dict) -> dict[str, bool]:
             and standard["automatic_review_turns"] == 0
         ),
         "intentional_gate_failed_then_passed": (
-            quick["gate_failed_then_passed"]
-            and standard["gate_failed_then_passed"]
+            quick["gate_failed_then_passed"] and standard["gate_failed_then_passed"]
         ),
         "gate_evidence_private": (
-            quick["gate_evidence_private"]
-            and standard["gate_evidence_private"]
+            quick["gate_evidence_private"] and standard["gate_evidence_private"]
         ),
     }
 
@@ -210,7 +209,9 @@ def build_report(
 ) -> dict:
     for metrics in measurements.values():
         if set(metrics) != APPROVED_METRIC_KEYS:
-            raise ValueError("Task 5 reports may contain only approved aggregate metrics.")
+            raise ValueError(
+                "Task 5 reports may contain only approved aggregate metrics."
+            )
     passed = (
         all(metric["task_success"] for metric in measurements.values())
         and all(budgets.values())
@@ -236,9 +237,7 @@ def task5_host_command(
     if host == "codex":
         return codex_command(project, prompt, enabled=enabled)
     command = claude_command(project, prompt, enabled=enabled)
-    allowed = ",".join(
-        [*(CLAUDE_TOOLS if enabled else ()), *BUILTIN_CLAUDE_TOOLS]
-    )
+    allowed = ",".join([*(CLAUDE_TOOLS if enabled else ()), *BUILTIN_CLAUDE_TOOLS])
     if "--allowedTools" in command:
         index = command.index("--allowedTools")
         command[index + 1] = allowed
@@ -454,10 +453,7 @@ def gate_evidence_is_private(project: Path) -> bool:
 
 
 def plan_artifact_count(project: Path) -> int:
-    return sum(
-        "plan" in path.casefold()
-        for path in source_snapshot(project)
-    )
+    return sum("plan" in path.casefold() for path in source_snapshot(project))
 
 
 def host_invocation(host: str) -> str:
@@ -517,7 +513,12 @@ def run_initialization(
             timeout_seconds=timeout_seconds,
             codex_skill_path=codex_skill_path,
         )
-        require_turn(first, tools=["project_status"], edited=False, label="initialization_request")
+        require_turn(
+            first,
+            tools=["project_status"],
+            edited=False,
+            label="initialization_request",
+        )
         if database_evidence(project)["managed"]:
             raise MeasurementFailure("initialization_happened_before_confirmation")
         second = run_turn(
@@ -615,7 +616,10 @@ def run_representative_flow(
             label=f"{risk}_failed_gate",
         )
         failed_state = database_evidence(project)
-        if failed_state["state"] != "implementing" or failed_state["gate_failures"] != 1:
+        if (
+            failed_state["state"] != "implementing"
+            or failed_state["gate_failures"] != 1
+        ):
             raise MeasurementFailure(f"{risk}_gate_did_not_catch_fault")
 
         repair = run_turn(

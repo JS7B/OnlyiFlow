@@ -8,7 +8,7 @@ import unittest
 from contextlib import closing
 from pathlib import Path
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 from onlyiflow.runtime import Runtime
 
@@ -22,7 +22,9 @@ INITIALIZATION_ENTRIES = [
 
 class ProjectRuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory(prefix="OnlyiFlow project runtime ")
+        self.temporary = tempfile.TemporaryDirectory(
+            prefix="OnlyiFlow project runtime "
+        )
         self.addCleanup(self.temporary.cleanup)
         self.project_root = Path(self.temporary.name) / "project with spaces"
         self.project_root.mkdir()

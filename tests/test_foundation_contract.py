@@ -34,17 +34,26 @@ class FoundationContractTests(unittest.TestCase):
 
         self.assertEqual(project["project"]["name"], "onlyiflow")
         self.assertEqual(project["project"]["version"], VERSION)
+        self.assertEqual(
+            project["project"]["description"],
+            "Explicit project-local development-flow state and deterministic landing evidence.",
+        )
         self.assertEqual(project["project"]["requires-python"], ">=3.11")
         self.assertEqual(project["project"]["dependencies"], ["fastmcp>=3.4,<4"])
         self.assertEqual(project["build-system"]["requires"], ["setuptools>=68"])
-        self.assertEqual(project["build-system"]["build-backend"], "setuptools.build_meta")
-        self.assertEqual(project["tool"]["setuptools"]["packages"]["find"]["where"], ["src"])
-        self.assertIn(
-            f'__version__ = "{VERSION}"',
-            (REPOSITORY_ROOT / "src/onlyiflow/__init__.py").read_text(
-                encoding="utf-8"
-            ),
+        self.assertEqual(
+            project["build-system"]["build-backend"], "setuptools.build_meta"
         )
+        self.assertEqual(
+            project["tool"]["setuptools"]["packages"]["find"]["where"], ["src"]
+        )
+        package_init = (REPOSITORY_ROOT / "src/onlyiflow/__init__.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"""OnlyiFlow project-local workflow runtime."""', package_init)
+        self.assertIn(f'__version__ = "{VERSION}"', package_init)
+        self.assertNotIn("foundation", project["project"]["description"].casefold())
+        self.assertNotIn("foundation", package_init.casefold())
 
     def test_host_manifests_describe_the_formal_plugin(self) -> None:
         manifests = [
@@ -112,7 +121,9 @@ class FoundationContractTests(unittest.TestCase):
                     "-s",
                 ],
             )
-            self.assertTrue(server["args"][6].replace("\\", "/").endswith("server/stdio.py"))
+            self.assertTrue(
+                server["args"][6].replace("\\", "/").endswith("server/stdio.py")
+            )
             self.assertEqual(server["env"]["FASTMCP_CHECK_FOR_UPDATES"], "off")
             self.assertEqual(server["env"]["FASTMCP_SHOW_SERVER_BANNER"], "false")
 
@@ -120,9 +131,9 @@ class FoundationContractTests(unittest.TestCase):
         codex_skill = (REPOSITORY_ROOT / "skills/onlyiflow/SKILL.md").read_text(
             encoding="utf-8"
         )
-        claude_skill = (
-            REPOSITORY_ROOT / "skills-claude/onlyiflow/SKILL.md"
-        ).read_text(encoding="utf-8")
+        claude_skill = (REPOSITORY_ROOT / "skills-claude/onlyiflow/SKILL.md").read_text(
+            encoding="utf-8"
+        )
         codex_metadata = (
             REPOSITORY_ROOT / "skills/onlyiflow/agents/openai.yaml"
         ).read_text(encoding="utf-8")
@@ -150,9 +161,27 @@ class FoundationContractTests(unittest.TestCase):
         marketplace = self.read_json_path(
             roots["codex"].parents[1] / ".agents/plugins/marketplace.json"
         )
+        zcode_marketplace = self.read_json_path(
+            roots["zcode"].parent / "marketplace.json"
+        )
 
         self.assertEqual(marketplace["name"], "onlyiflow-dev")
         self.assertNotIn("loader", json.dumps(marketplace).lower())
+        self.assertEqual(zcode_marketplace["name"], "onlyiflow-dev")
+        self.assertEqual(
+            zcode_marketplace["plugins"],
+            [
+                {
+                    "name": "onlyiflow",
+                    "version": VERSION,
+                    "description": (
+                        "Explicit project-local development-flow state and "
+                        "deterministic landing evidence."
+                    ),
+                    "source": "./onlyiflow",
+                }
+            ],
+        )
         self.assertEqual(
             {path.name for path in roots["codex"].iterdir()},
             {
@@ -189,7 +218,9 @@ class FoundationContractTests(unittest.TestCase):
             self.assertTrue((root / "src/onlyiflow/__init__.py").is_file())
             self.assertFalse((root / "src/onlyiflow_smoke").exists())
             self.assertFalse(any(root.rglob("__pycache__")))
-            self.assertFalse(any("smoke" in path.as_posix() for path in root.rglob("*")))
+            self.assertFalse(
+                any("smoke" in path.as_posix() for path in root.rglob("*"))
+            )
 
     def read_json_path(self, path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))

@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-import support
+import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -54,7 +54,9 @@ class SkillContractTests(unittest.TestCase):
 
         metadata = OPENAI_METADATA.read_text(encoding="utf-8")
         self.assertIn('display_name: "OnlyiFlow"', metadata)
-        self.assertIn('short_description: "Run an explicit, minimal development flow"', metadata)
+        self.assertIn(
+            'short_description: "Run an explicit, minimal development flow"', metadata
+        )
         self.assertIn(
             'default_prompt: "Use $onlyiflow:onlyiflow to start or resume an explicit '
             'workflow for the current project."',
@@ -82,6 +84,10 @@ class SkillContractTests(unittest.TestCase):
             "Never call `project_init` on the first unmanaged turn.",
             "Only call `project_init` after a new owner confirmation turn.",
             "Do not call `gate_run` unless the user explicitly asks to check or land.",
+            "An explicit `check` is complete owner authorization to call `gate_run`. When "
+            "`project_status` returns an `implementing` flow, call `gate_run` in the same "
+            "turn. Do not report, stop, ask a question, or request confirmation between "
+            "these calls.",
             "Call `landing_request` only after a passed gate.",
             "Report exactly one current state and one next action, then stop.",
             "For a managed quick start, call `project_status` and `flow_start` "
@@ -125,12 +131,8 @@ class SkillContractTests(unittest.TestCase):
             self.assertEqual(case["onlyiflow_calls"], 0)
 
         for case in evaluations["explicit"]:
-            self.assertTrue(
-                case["codex_prompt"].startswith("$onlyiflow:onlyiflow ")
-            )
-            self.assertTrue(
-                case["claude_prompt"].startswith("/onlyiflow:onlyiflow ")
-            )
+            self.assertTrue(case["codex_prompt"].startswith("$onlyiflow:onlyiflow "))
+            self.assertTrue(case["claude_prompt"].startswith("/onlyiflow:onlyiflow "))
             self.assertIs(case["activate"], True)
             self.assertIn(
                 case["setup"],

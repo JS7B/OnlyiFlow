@@ -1,3 +1,3 @@
-"""OnlyiFlow plugin runtime foundation."""
+"""OnlyiFlow project-local workflow runtime."""
 
 __version__ = "0.1.0"
