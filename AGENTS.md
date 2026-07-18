@@ -22,10 +22,13 @@ engineering specifications explicitly approve it and a focused test justifies th
 
 ## Current Boundary
 
-Version `0.1.0` is the verified GitHub release. The normative product, engineering, and release
-contracts are in `docs/product-spec.md`, `docs/engineering-spec.md`, and `docs/release-guide.md`.
-The accepted reports, hashes, three-host lifecycle results, fifteen-criterion audit, and delivery
-record are in `docs/evaluations/2026-07-17-task7-release-readiness.md`.
+Version `0.1.0` remains the verified GitHub release. The `0.2.0` release candidate adds only Claude
+Code user-scope installation; it is committed to `main` but is not a released tag until the owner
+separately authorizes the tag and GitHub Release. The normative product, engineering, and release contracts
+are in `docs/product-spec.md`, `docs/engineering-spec.md`, and `docs/release-guide.md`. The accepted
+`0.1.0` audit and delivery record are in
+`docs/evaluations/2026-07-17-task7-release-readiness.md`; the `0.2.0` installation evidence is in
+`docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`.
 
 No OnlyiFlow test plugin, MCP registration, versioned plugin cache, temporary workspace, or runtime
 process may remain after verification. The owner-approved uninstalled ZCode Discover source is the
@@ -36,6 +39,13 @@ The owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a` remains in 
 only. Corrective merge `0305d9e5c9bc0491bc30e5e25b72cf1097a6e068` recorded it without
 changing the validated release tree. Do not install another Codex version, publish OnlyiFlow to a
 public plugin marketplace, or start later product work without explicit owner direction.
+
+Claude `0.2.0` installation requires a retained extracted local Marketplace directory plus a
+user-selected Python 3.11+ environment containing the dependencies listed in `requirements.txt`.
+Host launchers call the `python` command visible to their process and must not name a Conda
+environment. Claude Code 2.1.197 was observed returning `Unknown command` when the installed
+directory Marketplace source was hidden. Do not claim environment-free or source-independent
+installation, add a frozen runtime, publish through npm, or implement multiple active flows.
 
 The intended first product increment is one manually invoked `onlyiflow` Skill plus one local stdio
 MCP server. It must not contain or install Hooks, subagents, commands, background monitors,
@@ -65,17 +75,18 @@ showed that Claude Code auto-discovers root `skills/` and project `.mcp.json` in
 declared plugin resources, which duplicates a universal source tree. Generate minimal host package
 roots with `scripts/build_loader_candidates.py`; every generated package must remain self-contained.
 
-The proposed implementation layout is:
+The implementation layout is:
 
 ```text
-.codex-plugin/plugin.json
-.claude-plugin/plugin.json
-.zcode-plugin/plugin.json
-skills/onlyiflow/SKILL.md        # Codex wrapper
-skills-claude/onlyiflow/SKILL.md # Claude/ZCode manual wrapper until ZCode proof differs
-.mcp.json
-.mcp.claude.json
+packaging/codex/.codex-plugin/plugin.json
+packaging/codex/.mcp.json
+packaging/codex/skills/onlyiflow/SKILL.md
+packaging/claude/.claude-plugin/plugin.json
+packaging/claude/.mcp.claude.json
+packaging/zcode/.zcode-plugin/plugin.json
+packaging/shared/skills-claude/onlyiflow/SKILL.md
 pyproject.toml
+requirements.txt
 server/stdio.py
 src/onlyiflow/
 scripts/build_loader_candidates.py
@@ -87,7 +98,7 @@ Generated development roots are:
 
 ```text
 build/loader-candidates/codex-marketplace/plugins/onlyiflow/
-build/loader-candidates/claude/onlyiflow/
+build/loader-candidates/claude-marketplace/plugins/onlyiflow/
 build/loader-candidates/zcode/onlyiflow/
 ```
 
@@ -182,8 +193,14 @@ Current local verification consists of:
 ```powershell
 conda run --no-capture-output -n myself python -s -B -m unittest discover -s tests -v
 conda run --no-capture-output -n myself python -s -B "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
-claude plugin validate build\loader-candidates\claude\onlyiflow
+claude plugin validate build\loader-candidates\claude-marketplace\plugins\onlyiflow
+claude plugin validate build\loader-candidates\claude-marketplace
+conda run --no-capture-output -n myself python -s -B scripts\run_claude_user_install_lifecycle.py --timeout-seconds 600
+conda run --no-capture-output -n myself python -s -B scripts\run_claude_user_install_acceptance.py --timeout-seconds 600
 ```
+
+These commands use the owner's preferred local development environment only; that environment name
+is not part of the distributed launcher or user installation contract.
 
 The system `plugin-creator/scripts/validate_plugin.py` currently expects a Claude-style
 `mcpServers` wrapper inside `.mcp.json` and rejects Codex's runtime-verified direct server map. Do

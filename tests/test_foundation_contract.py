@@ -11,7 +11,7 @@ from scripts.build_loader_candidates import build_candidates
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SERVER_NAME = "onlyiflow"
 EXPECTED_TOOLS = [
     "project_status",
@@ -40,6 +40,10 @@ class FoundationContractTests(unittest.TestCase):
         )
         self.assertEqual(project["project"]["requires-python"], ">=3.11")
         self.assertEqual(project["project"]["dependencies"], ["fastmcp>=3.4,<4"])
+        requirements = (REPOSITORY_ROOT / "requirements.txt").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(requirements.splitlines(), project["project"]["dependencies"])
         self.assertEqual(project["build-system"]["requires"], ["setuptools>=68"])
         self.assertEqual(
             project["build-system"]["build-backend"], "setuptools.build_meta"
@@ -57,9 +61,9 @@ class FoundationContractTests(unittest.TestCase):
 
     def test_host_manifests_describe_the_formal_plugin(self) -> None:
         manifests = [
-            self.read_json(".codex-plugin/plugin.json"),
-            self.read_json(".claude-plugin/plugin.json"),
-            self.read_json(".zcode-plugin/plugin.json"),
+            self.read_json("packaging/codex/.codex-plugin/plugin.json"),
+            self.read_json("packaging/claude/.claude-plugin/plugin.json"),
+            self.read_json("packaging/zcode/.zcode-plugin/plugin.json"),
         ]
 
         self.assertEqual({manifest["name"] for manifest in manifests}, {"onlyiflow"})
@@ -83,13 +87,15 @@ class FoundationContractTests(unittest.TestCase):
             ],
         )
 
-    def test_host_launchers_keep_the_proven_interpreter_contract(self) -> None:
-        codex_manifest = self.read_json(".codex-plugin/plugin.json")
-        codex_config = self.read_json(".mcp.json")
+    def test_host_launchers_use_the_user_selected_python_environment(self) -> None:
+        codex_manifest = self.read_json("packaging/codex/.codex-plugin/plugin.json")
+        codex_config = self.read_json("packaging/codex/.mcp.json")
         codex = codex_config[SERVER_NAME]
-        claude_manifest = self.read_json(".claude-plugin/plugin.json")
-        claude = self.read_json(".mcp.claude.json")["mcpServers"][SERVER_NAME]
-        zcode_manifest = self.read_json(".zcode-plugin/plugin.json")
+        claude_manifest = self.read_json("packaging/claude/.claude-plugin/plugin.json")
+        claude = self.read_json("packaging/claude/.mcp.claude.json")["mcpServers"][
+            SERVER_NAME
+        ]
+        zcode_manifest = self.read_json("packaging/zcode/.zcode-plugin/plugin.json")
         zcode = zcode_manifest["mcpServers"][SERVER_NAME]
 
         self.assertEqual(set(codex_config), {SERVER_NAME})
@@ -109,33 +115,26 @@ class FoundationContractTests(unittest.TestCase):
         self.assertIn("${ZCODE_PLUGIN_ROOT}/server/stdio.py", zcode["args"])
 
         for server in [codex, claude, zcode]:
-            self.assertEqual(server["command"], "conda")
-            self.assertEqual(
-                server["args"][0:6],
-                [
-                    "run",
-                    "--no-capture-output",
-                    "-n",
-                    "myself",
-                    "python",
-                    "-s",
-                ],
-            )
+            self.assertEqual(server["command"], "python")
+            self.assertEqual(server["args"][:-1], ["-B"])
             self.assertTrue(
-                server["args"][6].replace("\\", "/").endswith("server/stdio.py")
+                server["args"][-1].replace("\\", "/").endswith("server/stdio.py")
             )
+            serialized = json.dumps(server).casefold()
+            self.assertNotIn("conda", serialized)
+            self.assertNotIn("myself", serialized)
             self.assertEqual(server["env"]["FASTMCP_CHECK_FOR_UPDATES"], "off")
             self.assertEqual(server["env"]["FASTMCP_SHOW_SERVER_BANNER"], "false")
 
     def test_onlyiflow_skill_is_explicit_and_portable(self) -> None:
-        codex_skill = (REPOSITORY_ROOT / "skills/onlyiflow/SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        claude_skill = (REPOSITORY_ROOT / "skills-claude/onlyiflow/SKILL.md").read_text(
-            encoding="utf-8"
-        )
+        codex_skill = (
+            REPOSITORY_ROOT / "packaging/codex/skills/onlyiflow/SKILL.md"
+        ).read_text(encoding="utf-8")
+        claude_skill = (
+            REPOSITORY_ROOT / "packaging/shared/skills-claude/onlyiflow/SKILL.md"
+        ).read_text(encoding="utf-8")
         codex_metadata = (
-            REPOSITORY_ROOT / "skills/onlyiflow/agents/openai.yaml"
+            REPOSITORY_ROOT / "packaging/codex/skills/onlyiflow/agents/openai.yaml"
         ).read_text(encoding="utf-8")
 
         self.assertIn("name: onlyiflow", codex_skill)
@@ -188,6 +187,7 @@ class FoundationContractTests(unittest.TestCase):
                 ".codex-plugin",
                 ".mcp.json",
                 "pyproject.toml",
+                "requirements.txt",
                 "server",
                 "skills",
                 "src",
@@ -199,6 +199,7 @@ class FoundationContractTests(unittest.TestCase):
                 ".claude-plugin",
                 ".mcp.claude.json",
                 "pyproject.toml",
+                "requirements.txt",
                 "server",
                 "skills-claude",
                 "src",
@@ -209,12 +210,17 @@ class FoundationContractTests(unittest.TestCase):
             {
                 ".zcode-plugin",
                 "pyproject.toml",
+                "requirements.txt",
                 "server",
                 "skills-claude",
                 "src",
             },
         )
         for root in roots.values():
+            self.assertEqual(
+                (root / "requirements.txt").read_text(encoding="utf-8"),
+                "fastmcp>=3.4,<4\n",
+            )
             self.assertTrue((root / "src/onlyiflow/__init__.py").is_file())
             self.assertFalse((root / "src/onlyiflow_smoke").exists())
             self.assertFalse(any(root.rglob("__pycache__")))

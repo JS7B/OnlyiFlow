@@ -145,7 +145,7 @@ class Task5MeasurementTests(unittest.TestCase):
         ]:
             self.assertNotIn(prohibited, serialized)
 
-    def test_disabled_claude_command_keeps_prompt_outside_allowed_tools(self) -> None:
+    def test_disabled_claude_command_keeps_prompt_before_allowed_tools(self) -> None:
         command = task5_host_command(
             "claude",
             Path("project"),
@@ -155,8 +155,8 @@ class Task5MeasurementTests(unittest.TestCase):
 
         allowed_index = command.index("--allowedTools")
         disabled_index = command.index("--disable-slash-commands")
+        self.assertLess(command.index("ordinary prompt"), allowed_index)
         self.assertLess(allowed_index, disabled_index)
-        self.assertEqual(command[-1], "ordinary prompt")
 
     def test_measurement_gate_catches_fault_then_passes_after_fix(self) -> None:
         from onlyiflow.runtime import Runtime

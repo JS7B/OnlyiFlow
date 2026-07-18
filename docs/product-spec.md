@@ -1,8 +1,8 @@
 # OnlyiFlow Product Specification
 
-Date: 2026-07-16
+Date: 2026-07-18
 
-Status: Normative specification for the OnlyiFlow 0.1.0 release candidate
+Status: Normative specification for the OnlyiFlow 0.2.0 release candidate
 
 ## Product Definition
 
@@ -48,6 +48,7 @@ The target user is one AI full-stack developer who:
 - Run deterministic configured gates and return compact evidence.
 - Keep human landing approval outside model-callable MCP tools.
 - Behave consistently across Codex, Claude Code, and ZCode even when package metadata differs.
+- Support persistent Claude Code user-scope installation across projects on one Windows account.
 - Measure workflow overhead and remove features that do not improve state continuity or landing
   evidence.
 
@@ -65,7 +66,9 @@ The first increment does not provide:
 - automatic dependency or plugin installation;
 - user-level Agent configuration edits;
 - a public marketplace release;
-- host-level enforcement of direct Git commands.
+- host-level enforcement of direct Git commands;
+- environment-free execution, a frozen executable, npm distribution, or cross-computer setup;
+- multiple simultaneous non-terminal flows in one managed project.
 
 ## Invocation Contract
 
@@ -220,8 +223,14 @@ adapter lifecycle tool is exposed.
 
 ## Release Boundary
 
-Codex and Claude Code loader behavior may be automated during development. ZCode release acceptance
-is owner-assisted: the owner imports the generated local marketplace through ZCode Desktop, runs
-the shared smoke contract, and removes the installed plugin.
+Claude Code 0.2.0 distribution is one local Marketplace installed at `user` scope. The extracted
+Marketplace directory and a user-selected Python 3.11+ environment containing the dependencies
+listed in `requirements.txt` must remain available while the plugin is installed. OnlyiFlow does
+not prescribe Conda, virtualenv, a system interpreter, or an environment name. Installation does
+not configure another computer or remove the Python environment prerequisite.
+
+Codex and Claude Code loader behavior may be automated during development. ZCode release
+acceptance is owner-assisted: the owner imports the generated local marketplace through ZCode
+Desktop, runs the shared smoke contract, and removes the installed plugin.
 
 No release claim is allowed until all three hosts pass the same Skill and MCP behavior.

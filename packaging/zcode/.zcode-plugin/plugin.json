@@ -1,6 +1,6 @@
 {
   "name": "onlyiflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Explicit project-local development-flow state and deterministic landing evidence.",
   "author": {
     "name": "OnlyiFlow"
@@ -9,14 +9,9 @@
   "skills": "skills-claude",
   "mcpServers": {
     "onlyiflow": {
-      "command": "conda",
+      "command": "python",
       "args": [
-        "run",
-        "--no-capture-output",
-        "-n",
-        "myself",
-        "python",
-        "-s",
+        "-B",
         "${ZCODE_PLUGIN_ROOT}/server/stdio.py"
       ],
       "cwd": "${ZCODE_PROJECT_DIR}",

@@ -8,9 +8,11 @@ import support  # noqa: F401  # Adds the repository source root to sys.path.
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-CODEX_SKILL = REPOSITORY_ROOT / "skills/onlyiflow/SKILL.md"
-CLAUDE_SKILL = REPOSITORY_ROOT / "skills-claude/onlyiflow/SKILL.md"
-OPENAI_METADATA = REPOSITORY_ROOT / "skills/onlyiflow/agents/openai.yaml"
+CODEX_SKILL = REPOSITORY_ROOT / "packaging/codex/skills/onlyiflow/SKILL.md"
+CLAUDE_SKILL = REPOSITORY_ROOT / "packaging/shared/skills-claude/onlyiflow/SKILL.md"
+OPENAI_METADATA = (
+    REPOSITORY_ROOT / "packaging/codex/skills/onlyiflow/agents/openai.yaml"
+)
 EVALUATIONS = REPOSITORY_ROOT / "tests/fixtures/skill_evaluations.json"
 DESCRIPTION = (
     "Use only when the user explicitly invokes OnlyiFlow or explicitly asks to "

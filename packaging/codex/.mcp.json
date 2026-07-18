@@ -1,13 +1,8 @@
 {
   "onlyiflow": {
-    "command": "conda",
+    "command": "python",
     "args": [
-      "run",
-      "--no-capture-output",
-      "-n",
-      "myself",
-      "python",
-      "-s",
+      "-B",
       "./server/stdio.py"
     ],
     "cwd": ".",

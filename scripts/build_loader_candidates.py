@@ -7,21 +7,17 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+TEMPLATE_ROOT = REPOSITORY_ROOT / "packaging"
 COMMON_DIRECTORIES = ("server", "src")
-COMMON_FILES = ("pyproject.toml",)
-HOST_CONTENTS = {
-    "codex": {
-        "directories": (".codex-plugin", "skills"),
-        "files": (".mcp.json",),
-    },
-    "claude": {
-        "directories": (".claude-plugin", "skills-claude"),
-        "files": (".mcp.claude.json",),
-    },
-    "zcode": {
-        "directories": (".zcode-plugin", "skills-claude"),
-        "files": (),
-    },
+COMMON_FILES = ("pyproject.toml", "requirements.txt")
+HOST_TEMPLATE_ROOTS = {
+    "codex": TEMPLATE_ROOT / "codex",
+    "claude": TEMPLATE_ROOT / "claude",
+    "zcode": TEMPLATE_ROOT / "zcode",
+}
+SHARED_HOST_DIRECTORIES = {
+    "claude": (TEMPLATE_ROOT / "shared" / "skills-claude",),
+    "zcode": (TEMPLATE_ROOT / "shared" / "skills-claude",),
 }
 
 
@@ -32,25 +28,44 @@ def build_candidates(output_root: Path) -> dict[str, Path]:
 
     roots = {
         "codex": output_root / "codex-marketplace" / "plugins" / "onlyiflow",
-        "claude": output_root / "claude" / "onlyiflow",
+        "claude": output_root / "claude-marketplace" / "plugins" / "onlyiflow",
         "zcode": output_root / "zcode" / "onlyiflow",
     }
     for host, destination in roots.items():
         destination.mkdir(parents=True)
-        for directory in COMMON_DIRECTORIES + HOST_CONTENTS[host]["directories"]:
+        for directory in COMMON_DIRECTORIES:
             shutil.copytree(
                 REPOSITORY_ROOT / directory,
                 destination / directory,
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
-        for filename in HOST_CONTENTS[host]["files"]:
-            shutil.copy2(REPOSITORY_ROOT / filename, destination / filename)
         for filename in COMMON_FILES:
             shutil.copy2(REPOSITORY_ROOT / filename, destination / filename)
+        copy_template_root(HOST_TEMPLATE_ROOTS[host], destination)
+        for directory in SHARED_HOST_DIRECTORIES.get(host, ()):
+            shutil.copytree(
+                directory,
+                destination / directory.name,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
 
     write_codex_marketplace(output_root / "codex-marketplace")
+    write_claude_marketplace(output_root / "claude-marketplace")
     write_zcode_marketplace(output_root / "zcode")
     return roots
+
+
+def copy_template_root(source: Path, destination: Path) -> None:
+    for entry in source.iterdir():
+        target = destination / entry.name
+        if entry.is_dir():
+            shutil.copytree(
+                entry,
+                target,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+        else:
+            shutil.copy2(entry, target)
 
 
 def write_codex_marketplace(marketplace_root: Path) -> None:
@@ -68,6 +83,33 @@ def write_codex_marketplace(marketplace_root: Path) -> None:
                     "authentication": "ON_INSTALL",
                 },
                 "category": "Productivity",
+            }
+        ],
+    }
+    metadata.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_claude_marketplace(marketplace_root: Path) -> None:
+    plugin = json.loads(
+        (marketplace_root / "plugins/onlyiflow/.claude-plugin/plugin.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    metadata = marketplace_root / ".claude-plugin" / "marketplace.json"
+    metadata.parent.mkdir(parents=True)
+    payload = {
+        "name": "onlyiflow-local",
+        "owner": {"name": "OnlyiFlow"},
+        "description": "Local user-scope distribution for OnlyiFlow.",
+        "plugins": [
+            {
+                "name": plugin["name"],
+                "source": "./plugins/onlyiflow",
+                "version": plugin["version"],
+                "strict": True,
             }
         ],
     }

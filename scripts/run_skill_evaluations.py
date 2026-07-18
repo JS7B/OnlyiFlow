@@ -30,7 +30,9 @@ from onlyiflow.runtime import Runtime  # noqa: E402
 EVALUATIONS = REPOSITORY_ROOT / "tests/fixtures/skill_evaluations.json"
 RESULTS_ROOT = REPOSITORY_ROOT / "build/task4-evaluation-results"
 CODEX_MARKETPLACE = REPOSITORY_ROOT / "build/loader-candidates/codex-marketplace"
-CLAUDE_CANDIDATE = REPOSITORY_ROOT / "build/loader-candidates/claude/onlyiflow"
+CLAUDE_CANDIDATE = (
+    REPOSITORY_ROOT / "build/loader-candidates/claude-marketplace/plugins/onlyiflow"
+)
 TOOLS = (
     "project_status",
     "project_init",
@@ -190,10 +192,17 @@ def codex_skill_prompt(prompt: str, skill_path: Path) -> str:
     return prompt.replace(invocation, link, 1)
 
 
-def claude_command(project: Path, prompt: str, *, enabled: bool) -> list[str]:
+def claude_command(
+    project: Path,
+    prompt: str,
+    *,
+    enabled: bool,
+    user_installed: bool = False,
+) -> list[str]:
     command = [
         *cli_prefix("claude"),
         "-p",
+        prompt,
         "--no-session-persistence",
         "--output-format",
         "stream-json",
@@ -204,17 +213,11 @@ def claude_command(project: Path, prompt: str, *, enabled: bool) -> list[str]:
         "low",
     ]
     if enabled:
-        command.extend(
-            [
-                "--allowedTools",
-                ",".join(CLAUDE_TOOLS),
-                "--plugin-dir",
-                str(CLAUDE_CANDIDATE),
-            ]
-        )
+        command.extend(["--allowedTools", ",".join(CLAUDE_TOOLS)])
+        if not user_installed:
+            command.extend(["--plugin-dir", str(CLAUDE_CANDIDATE)])
     else:
         command.append("--disable-slash-commands")
-    command.append(prompt)
     return command
 
 
@@ -505,6 +508,13 @@ def reported_project_status_unavailable(output: str) -> bool:
             "unavailable",
             "not connected",
             "not reachable",
+            "did not appear",
+            "没有出现在",
+            "不可用",
+            "未注入",
+            "没有被注入",
+            "未暴露",
+            "未连接",
             "未在本会话中暴露",
             "isn't exposed",
             "isn’t exposed",

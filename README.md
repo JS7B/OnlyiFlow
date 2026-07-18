@@ -18,9 +18,15 @@ claim control over direct Git commands.
 
 ## Current Status
 
-Version `0.1.0` is the verified GitHub release. It contains the explicit-only `onlyiflow` Skill
-wrappers, bundled deterministic runtime, project-local SQLite state, configured Gate execution,
-and exactly seven MCP tools with closed input and output schemas.
+Version `0.1.0` remains the verified GitHub release. The `0.2.0` release candidate keeps the same
+workflow runtime and adds a local Claude Marketplace for persistent `user`-scope installation
+across projects on one Windows account. The accepted candidate is committed to `main`, but it is
+not tagged or released until separate owner approval.
+
+The Claude installation requires Python 3.11 or newer, the dependencies declared in
+`requirements.txt`, and a retained extracted local Marketplace directory. It is not
+environment-free, cross-computer setup, an npm package, or a public Marketplace publication.
+Multiple active flows remain out of scope.
 
 Claude and Codex pass the complete activation, efficiency/Gate, and release-smoke contracts. The
 owner-assisted ZCode smoke passes the same ordinary-isolation, owner-confirmed initialization,
@@ -40,6 +46,26 @@ host discovery differs, so isolated candidates are generated under `build/loader
 Legacy repositories outside this source tree are reference material only. This repository does not
 inherit their adapter, Hook, Attention, event-ingestion, or capability-probe architecture.
 
+## Runtime Requirements
+
+OnlyiFlow does not require a particular environment manager or environment name. Select any Python
+3.11+ environment and make sure its `python` command is visible to the host process. If using
+Conda, choose and activate the environment yourself before installing dependencies and starting the
+host.
+
+The required packages are listed in `requirements.txt`. From a source checkout, install them into
+the selected environment with:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+For the Claude release archive, use the copy bundled inside the retained Marketplace directory:
+
+```powershell
+python -m pip install -r "<retained-claude-marketplace>\plugins\onlyiflow\requirements.txt"
+```
+
 ## Repository Layers
 
 Normative specification:
@@ -51,8 +77,8 @@ Normative specification:
 Product and packaging implementation:
 
 - `src/onlyiflow/` and `server/stdio.py`: shipped deterministic runtime;
-- `skills/` and `skills-claude/`: shipped manual-only host wrappers;
-- host manifests plus `scripts/build_loader_candidates.py`: generated host packages.
+- `packaging/`: host manifests and manual-only Skill wrapper templates;
+- `scripts/build_loader_candidates.py`: generated host packages.
 
 Verification tooling:
 
@@ -77,11 +103,12 @@ and engineering specifications control.
 - [Three-host loader research contract](docs/research/2026-07-16-three-host-loader-contract.md)
 - [Plugin-first foundation plan](docs/plans/2026-07-16-plugin-first-framework-foundation.md)
 - [Owner installation and release guide](docs/release-guide.md)
+- [Claude user-scope installation plan](docs/plans/2026-07-18-v0.2.0-claude-user-install.md)
 
 Generated plugin candidates:
 
 - `build/loader-candidates/codex-marketplace/`
-- `build/loader-candidates/claude/onlyiflow/`
+- `build/loader-candidates/claude-marketplace/`
 - `build/loader-candidates/zcode/` (ZCode local marketplace root; plugin under `onlyiflow/`)
 
 ## Core Product Rule

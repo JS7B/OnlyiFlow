@@ -525,6 +525,21 @@ class SkillEvaluationRunnerTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertFalse(result.timed_out)
 
+    def test_claude_user_install_command_uses_no_sideload_path(self) -> None:
+        prompt = "/onlyiflow:onlyiflow report status only."
+        command = claude_command(
+            Path("project"),
+            prompt,
+            enabled=True,
+            user_installed=True,
+        )
+
+        self.assertNotIn("--plugin-dir", command)
+        self.assertIn("--allowedTools", command)
+        allowed = command[command.index("--allowedTools") + 1]
+        self.assertEqual(allowed.split(","), list(CLAUDE_TOOLS))
+        self.assertLess(command.index(prompt), command.index("--allowedTools"))
+
     def test_codex_explicit_prompt_uses_the_installed_skill_link(self) -> None:
         prompt = codex_skill_prompt(
             "$onlyiflow:onlyiflow start a quick flow.",

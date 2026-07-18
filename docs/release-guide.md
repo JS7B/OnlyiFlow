@@ -1,8 +1,8 @@
 # OnlyiFlow Owner Installation And Release Guide
 
-Version: 0.1.0
+Version: 0.2.0
 
-Status: verified release-candidate guide; commit, push, and release require owner approval
+Status: verified release-candidate guide; tagging and release require owner approval
 
 ## Product Boundary
 
@@ -17,19 +17,30 @@ isolated candidates described below.
 
 The owner prepares these prerequisites outside the plugin lifecycle:
 
-- Python 3.11 or newer in the Conda environment named `myself`;
-- `fastmcp>=3.4,<4` available in that environment;
-- `conda` available to the host process;
+- Python 3.11 or newer in an environment selected by the user;
+- the packages listed in `requirements.txt` installed in that environment;
+- the selected environment's `python` command available to the host process;
 - one supported host CLI or Desktop application; and
-- a local clone of this repository.
+- a local clone of this repository when building candidates from source.
 
-OnlyiFlow does not install or upgrade Python, FastMCP, a host CLI, or any other dependency. The
-Skill, MCP server, manifests, and host lifecycle contain no dependency-install command.
+OnlyiFlow does not prescribe Conda, virtualenv, a system interpreter, or an environment name. If
+using Conda, choose and activate the environment before installing dependencies and starting the
+host. The host launcher uses whichever `python` command that process can resolve.
 
-Verify the approved Python environment before building:
+For Claude user-scope installation, extract the generated Claude Marketplace archive to a stable
+local path. Keep that retained local Marketplace directory while the plugin is installed. The
+verified Claude Code 2.1.197 directory-marketplace loader does not load the installed Skill when
+that source directory is moved or deleted.
+
+OnlyiFlow does not automatically install or upgrade Python, FastMCP, a host CLI, or any other
+dependency. The user prepares the selected Python environment from the included dependency file.
+
+Prepare and verify the selected Python environment before building:
 
 ```powershell
-conda run --no-capture-output -n myself python -s -B -c "import sys, fastmcp; print(sys.version.split()[0]); print(fastmcp.__version__)"
+python --version
+python -m pip install -r requirements.txt
+python -c "import fastmcp; print(fastmcp.__version__)"
 ```
 
 ## Build The Host Candidates
@@ -37,7 +48,7 @@ conda run --no-capture-output -n myself python -s -B -c "import sys, fastmcp; pr
 From the repository root:
 
 ```powershell
-conda run --no-capture-output -n myself python -s -B scripts\build_loader_candidates.py
+python -B scripts\build_loader_candidates.py
 ```
 
 The builder refuses to overwrite an existing output tree. If `build/loader-candidates/` already
@@ -48,7 +59,7 @@ The command produces:
 
 ```text
 build/loader-candidates/codex-marketplace/
-build/loader-candidates/claude/onlyiflow/
+build/loader-candidates/claude-marketplace/
 build/loader-candidates/zcode/
 ```
 
@@ -84,24 +95,43 @@ Remove the plugin and temporary test marketplace after testing or when uninstall
 Confirm `plugin list --json` and `plugin marketplace list` contain no OnlyiFlow entry, and confirm
 the OnlyiFlow cache and MCP process are absent. Do not modify unrelated Codex plugins.
 
-## Claude Code Session Loading
+## Claude Code User-Scope Installation
 
-Claude Code needs no persistent installation for the verified owner path. From the project to be
-worked on, start a fresh session with the generated candidate:
+Copy or extract `build/loader-candidates/claude-marketplace/` to a stable local directory outside a
+temporary folder. Replace `<retained-claude-marketplace>` below with that directory:
 
 ```powershell
-claude --plugin-dir "<repository-root>\build\loader-candidates\claude\onlyiflow"
+python -m pip install -r "<retained-claude-marketplace>\plugins\onlyiflow\requirements.txt"
+claude plugin marketplace add "<retained-claude-marketplace>" --scope user
+claude plugin install onlyiflow@onlyiflow-local --scope user
 ```
 
-Explicit invocation is:
+Start a fresh Claude session in any project after changing plugin state. Explicit invocation is:
 
 ```text
 /onlyiflow:onlyiflow
 ```
 
-The candidate uses `${CLAUDE_PLUGIN_ROOT}` to launch its bundled server. Do not register a separate
-user-level MCP server. Ending the session unloads the candidate; `claude plugin list` should still
-contain no installed OnlyiFlow plugin.
+The candidate uses `${CLAUDE_PLUGIN_ROOT}` to launch its bundled server with the `python` command
+available to Claude Code. Do not register a separate user-level MCP server. Retain the extracted
+Marketplace directory and keep the selected Python environment available for as long as the plugin
+is installed.
+
+Disable, enable, update, or remove only the exact OnlyiFlow entry:
+
+```powershell
+claude plugin disable onlyiflow@onlyiflow-local --scope user
+claude plugin enable onlyiflow@onlyiflow-local --scope user
+claude plugin marketplace update onlyiflow-local
+claude plugin update onlyiflow@onlyiflow-local --scope user
+claude plugin uninstall onlyiflow@onlyiflow-local --scope user --yes
+claude plugin marketplace remove onlyiflow-local --scope user
+```
+
+Delete the retained Marketplace directory only after uninstalling the plugin and removing its
+Marketplace entry. A fresh `claude plugin list` and `claude plugin marketplace list` must then show
+no OnlyiFlow entry; no OnlyiFlow cache or MCP process may remain. Do not modify another Claude
+plugin or Marketplace.
 
 ## ZCode Owner-Assisted Lifecycle
 
@@ -110,7 +140,7 @@ unless the owner separately authorizes mutation.
 
 1. Open Plugin Management and choose Add Marketplace.
 2. Select the directory `build/loader-candidates/zcode/`.
-3. Confirm its root `marketplace.json` exposes only `onlyiflow` 0.1.0.
+3. Confirm its root `marketplace.json` exposes only `onlyiflow` 0.2.0.
 4. Select `获取`/install on the OnlyiFlow card.
 5. Confirm one OnlyiFlow Skill and the OnlyiFlow MCP server are visible.
 6. Invoke OnlyiFlow explicitly and run the required owner-confirmed workflow.
@@ -161,24 +191,22 @@ build before any model-backed verification. Replace `<fresh-empty-output-root>` 
 does not yet exist, then compare that build with the active candidates:
 
 ```powershell
-conda run --no-capture-output -n myself python -s -B -m ruff format --check .
-conda run --no-capture-output -n myself python -s -B -m ruff check .
-conda run --no-capture-output -n myself python -s -B -m unittest discover -s tests -v
-conda run --no-capture-output -n myself python -s -B "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
-claude plugin validate build\loader-candidates\claude\onlyiflow
-conda run --no-capture-output -n myself python -s -B scripts\build_loader_candidates.py --output-root "<fresh-empty-output-root>"
+python -B -m ruff format --check .
+python -B -m ruff check .
+python -B -m unittest discover -s tests -v
+python -B "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" build\loader-candidates\codex-marketplace\plugins\onlyiflow\skills\onlyiflow
+claude plugin validate build\loader-candidates\claude-marketplace
+claude plugin validate build\loader-candidates\claude-marketplace\plugins\onlyiflow
+python -B scripts\build_loader_candidates.py --output-root "<fresh-empty-output-root>"
 ```
 
-Run model-backed hosts sequentially. A network or model timeout is infrastructure evidence, not a
-product failure; stop after the first infrastructure failure instead of retrying blindly.
+Run the Claude user-scope lifecycle and model-backed acceptance sequentially. A network or model
+timeout is infrastructure evidence, not a product failure; stop after the first infrastructure
+failure instead of retrying blindly.
 
 ```powershell
-conda run --no-capture-output -n myself python -s -B scripts\run_skill_evaluations.py --host claude --mode both --timeout-seconds 600
-conda run --no-capture-output -n myself python -s -B scripts\run_skill_evaluations.py --host codex --mode both --timeout-seconds 600 --allow-codex-plugin-lifecycle
-conda run --no-capture-output -n myself python -s -B scripts\run_efficiency_measurements.py --host claude --timeout-seconds 600
-conda run --no-capture-output -n myself python -s -B scripts\run_efficiency_measurements.py --host codex --timeout-seconds 600 --allow-codex-plugin-lifecycle
-conda run --no-capture-output -n myself python -s -B scripts\run_release_smoke.py --host claude --timeout-seconds 600
-conda run --no-capture-output -n myself python -s -B scripts\run_release_smoke.py --host codex --timeout-seconds 600 --allow-codex-plugin-lifecycle
+python -B scripts\run_claude_user_install_lifecycle.py --timeout-seconds 600
+python -B scripts\run_claude_user_install_acceptance.py --timeout-seconds 600
 ```
 
 The automated reports do not replace the owner-assisted ZCode lifecycle and behavioral smoke.
@@ -192,8 +220,9 @@ Authoritative evidence is recorded in:
 
 - activation evaluation: `docs/evaluations/2026-07-16-task4-skill-evaluation.md`;
 - efficiency and Gate value: `docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`;
-- three-host release smoke: `docs/evaluations/2026-07-17-task6-three-host-release-smoke.md`; and
-- release readiness: `docs/evaluations/2026-07-17-task7-release-readiness.md`.
+- three-host release smoke: `docs/evaluations/2026-07-17-task6-three-host-release-smoke.md`;
+- release readiness: `docs/evaluations/2026-07-17-task7-release-readiness.md`; and
+- Claude user-scope installation: `docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`.
 
-Commit, push, publication, and any public marketplace release require separate owner approval.
-Passing automated checks alone is not that approval.
+Tag creation, GitHub Release creation, publication, and any public marketplace release require
+separate owner approval. Passing automated checks alone is not that approval.

@@ -1,8 +1,8 @@
 # OnlyiFlow Engineering Specification
 
-Date: 2026-07-16
+Date: 2026-07-18
 
-Status: Normative engineering specification for the OnlyiFlow 0.1.0 release candidate
+Status: Normative engineering specification for the OnlyiFlow 0.2.0 release candidate
 
 ## Greenfield Rule
 
@@ -39,14 +39,20 @@ Keep the semantic runtime in one source tree and generate isolated host package 
 
 ```text
 OnlyiFlow/
-  .codex-plugin/plugin.json
-  .claude-plugin/plugin.json
-  .zcode-plugin/plugin.json
-  skills/onlyiflow/SKILL.md        # Codex wrapper
-  skills-claude/onlyiflow/SKILL.md # Claude/ZCode wrapper
-  .mcp.json
-  .mcp.claude.json
+  packaging/
+    codex/
+      .codex-plugin/plugin.json
+      .mcp.json
+      skills/onlyiflow/SKILL.md
+    claude/
+      .claude-plugin/plugin.json
+      .mcp.claude.json
+    zcode/
+      .zcode-plugin/plugin.json
+    shared/
+      skills-claude/onlyiflow/SKILL.md
   pyproject.toml
+  requirements.txt
   server/stdio.py
   src/onlyiflow/
   scripts/build_loader_candidates.py
@@ -97,14 +103,18 @@ justify the split.
 ## Python And Dependency Boundary
 
 - Python 3.11+ is the only implementation language in the first increment.
-- `pyproject.toml` declares version `0.1.0`, Python `>=3.11`, setuptools, and
+- `pyproject.toml` declares version `0.2.0`, Python `>=3.11`, setuptools, and
   `fastmcp>=3.4,<4`.
+- `requirements.txt` contains the same runtime dependency list for users who prepare an existing
+  environment without installing the project package.
 - No dependency installation occurs from the Skill, MCP server, launcher, or plugin lifecycle.
 - The selected interpreter and dependency availability are loader acceptance facts, not assumptions.
 - Loader acceptance uses the final launcher and imports the real runtime plus every declared
   third-party dependency; a standalone probe that bypasses this path is insufficient.
-- The interpreter is supplied by the owner-approved `myself` environment. No launcher embeds an
-  absolute interpreter path or installs a dependency.
+- Every host launcher calls `python` from the host process environment. The user chooses the
+  environment manager and environment name and is responsible for making Python 3.11+ plus
+  `requirements.txt` dependencies available there. No launcher embeds an absolute interpreter
+  path, names a Conda environment, or installs a dependency.
 
 ## Project Root Contract
 
@@ -312,8 +322,16 @@ arguments and must not embed a versioned cache path.
 
 Use the generated Claude-only root with `.claude-plugin/plugin.json`, its declared
 `skills-claude/`, plugin-owned MCP configuration, and `disable-model-invocation: true`. Explicit
-invocation uses the namespaced slash command. Development uses `--plugin-dir`; bundled paths use
-the documented `${CLAUDE_PLUGIN_ROOT}` substitution. Do not call `claude mcp add`.
+invocation uses the namespaced slash command. Package it inside
+`build/loader-candidates/claude-marketplace/`, add that directory Marketplace at Claude `user`
+scope, and install `onlyiflow@onlyiflow-local` at `user` scope. Bundled paths use the documented
+`${CLAUDE_PLUGIN_ROOT}` substitution. Do not call `claude mcp add`.
+
+The verified Claude Code 2.1.197 directory-marketplace loader requires the extracted local
+Marketplace directory to remain available during session loading even though installation also
+creates a versioned plugin cache. Treat that retained Marketplace and the user-selected Python
+3.11+ environment with `requirements.txt` installed as explicit host prerequisites. Do not claim
+source-independent, environment-free, cross-computer, npm, or frozen-runtime installation.
 The current explicit command is `/onlyiflow:onlyiflow`.
 
 ### ZCode
@@ -340,6 +358,7 @@ Implementation uses tests first. Required suites include:
 - copied-plugin and paths-with-spaces stdio tests;
 - Skill static prohibitions and prompt non-trigger evaluations;
 - Codex and Claude live loader smoke;
+- Claude user-scope add/install/disable/enable/update/uninstall and cross-project model acceptance;
 - owner-assisted ZCode release smoke.
 
 No unit test uses a real model, user credential, user-level plugin mutation, or network call.
