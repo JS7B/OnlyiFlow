@@ -70,6 +70,7 @@ class ReleaseDocumentationTests(unittest.TestCase):
     def test_normative_documents_exclude_machine_and_task_history(self) -> None:
         for relative_path in (
             "README.md",
+            "README.zh-CN.md",
             "docs/product-spec.md",
             "docs/engineering-spec.md",
             "docs/release-guide.md",
@@ -79,6 +80,13 @@ class ReleaseDocumentationTests(unittest.TestCase):
             self.assertIsNone(re.search(r"[A-Z]:\\", contents), relative_path)
             self.assertIsNone(re.search(r"\bTask \d+\b", contents), relative_path)
             self.assertNotIn("At that checkpoint", contents, relative_path)
+
+    def test_readmes_link_to_each_other(self) -> None:
+        english = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+        chinese = (REPOSITORY_ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("[简体中文](README.zh-CN.md)", english)
+        self.assertIn("[English](README.md)", chinese)
 
 
 if __name__ == "__main__":

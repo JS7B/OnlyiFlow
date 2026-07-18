@@ -1,5 +1,7 @@
 # OnlyiFlow
 
+[简体中文](README.zh-CN.md) | English
+
 OnlyiFlow is a small personal development-flow plugin for one owner working across Codex, Claude
 Code, and ZCode.
 
