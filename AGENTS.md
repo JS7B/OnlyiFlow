@@ -22,25 +22,38 @@ engineering specifications explicitly approve it and a focused test justifies th
 
 ## Current Boundary
 
-Version `0.1.0` remains the verified GitHub release. The `0.2.0` release candidate adds only Claude
-Code user-scope installation; it is committed to `main` but is not a released tag until the owner
-separately authorizes the tag and GitHub Release. The normative product, engineering, and release contracts
-are in `docs/product-spec.md`, `docs/engineering-spec.md`, and `docs/release-guide.md`. The accepted
-`0.1.0` audit and delivery record are in
+Version `0.3.0` is the current verified GitHub release. It includes the Claude Code user-scope
+installation introduced in 0.2.0 plus owner-confirmed Gate configuration, project readiness, and
+the legacy empty-Gate migration path. The normative product, engineering, and release contracts
+are in `docs/product-spec.md`, `docs/engineering-spec.md`, and
+`docs/release-guide.md`. The accepted `0.1.0` audit and delivery record are in
 `docs/evaluations/2026-07-17-task7-release-readiness.md`; the `0.2.0` installation evidence is in
-`docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`.
+`docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`; and the local plus Claude acceptance
+record for the `0.3.0` release is in
+`docs/evaluations/2026-07-19-v0.3.0-gate-configuration.md`. The owner deferred live Codex 0.3.0
+model verification. The retained local Codex installation now resolves to 0.3.0 from the generated
+Marketplace and remains enabled, but its host inventory is not accepted as model-visibility
+evidence. ZCode 3.3.6 owner-assisted 0.3.0 verification passed through unload and cleanup; the
+uninstalled local Marketplace remains the only retained ZCode discovery state.
 
-No OnlyiFlow test plugin, MCP registration, versioned plugin cache, temporary workspace, or runtime
-process may remain after verification. The owner-approved uninstalled ZCode Discover source is the
-only retained lifecycle state. A successful host listing is not model-visibility evidence; accepted
-reports must contain the expected real MCP call sequence.
+Claude 0.3.0 additionally passed the corrected 12-check release smoke, including separate Gate
+proposal and owner-confirmation sessions with the exact `project_status -> gate_configure`
+confirmation sequence. The accepted report and hash are recorded in the 0.3.0 evidence document.
+ZCode 0.3.0 also passed the owner-assisted eight-tool confirmation, failing/passing Gate, landing,
+unload, and cleanup sequence recorded there.
+
+No runner-owned OnlyiFlow test plugin, MCP registration, versioned plugin cache, temporary
+workspace, or runtime process may remain after verification. The owner-retained Codex development
+installation and the owner-approved uninstalled ZCode Discover source are the only retained
+lifecycle state. A successful host listing is not model-visibility evidence; accepted reports must
+contain the expected real MCP call sequence.
 
 The owner-rejected commit `8a539f2b8d1debb34b184f4682910ff30dbf863a` remains in Git history
 only. Corrective merge `0305d9e5c9bc0491bc30e5e25b72cf1097a6e068` recorded it without
 changing the validated release tree. Do not install another Codex version, publish OnlyiFlow to a
 public plugin marketplace, or start later product work without explicit owner direction.
 
-Claude `0.2.0` installation requires a retained extracted local Marketplace directory plus a
+Claude user-scope installation requires a retained extracted local Marketplace directory plus a
 user-selected Python 3.11+ environment containing the dependencies listed in `requirements.txt`.
 Host launchers call the `python` command visible to their process and must not name a Conda
 environment. Claude Code 2.1.197 was observed returning `Unknown command` when the installed
@@ -118,11 +131,12 @@ Hook normalization, transcript/event ledgers, Attention loops, or generated Agen
 
 ## MCP Boundary
 
-The first increment exposes exactly these seven tools:
+The current release exposes exactly these eight tools:
 
 ```text
 project_status
 project_init
+gate_configure
 flow_start
 spec_submit
 flow_claim
@@ -146,7 +160,16 @@ Every tool must:
 `project_status` must never create `.onlyiflow/`. Only `project_init`, after owner confirmation, may
 create local state.
 
-For an already managed project, a new `quick` flow must reach `implementing` through:
+After initialization, `project_status` reports Gate readiness. When no flow is active, an empty
+configuration returns `gate_configure` as the one next action and `flow_start` must reject the
+project. The Skill must present the complete proposed checks and wait for a separate owner turn;
+only after confirmation may `gate_configure` atomically replace the complete list. Configuration
+replacement is forbidden while any flow is active. A flow created by an earlier version with an
+empty Gate is the sole exception: `project_status` returns `gate_configure`, and a separately
+confirmed call may write its first non-empty Gate before the flow resumes.
+
+For an already managed and Gate-configured project, a new `quick` flow must reach `implementing`
+through:
 
 ```text
 project_status -> flow_start
@@ -173,7 +196,9 @@ Do not create attention keys, generated Agent configuration, adapter manifests, 
 or raw command-output logs.
 
 Gate evidence is compact metadata only: check ID, required flag, pass/fail, reason code, duration,
-and exit code where applicable.
+and exit code where applicable. Gate configuration responses add only check IDs, required flags,
+timeouts, and counts. Command text exists only in `config.toml`, never in SQLite, domain events,
+MCP responses, or reports.
 
 ## Development Rules
 

@@ -79,7 +79,10 @@ class ProjectRuntimeTests(unittest.TestCase):
         self.assertEqual(created["data"]["entries"], INITIALIZATION_ENTRIES)
         self.assertEqual(
             created["next_action"],
-            {"tool": "flow_start", "reason_code": "project_ready"},
+            {
+                "tool": "gate_configure",
+                "reason_code": "gate_configuration_required",
+            },
         )
         self.assertTrue(repeated["ok"])
         self.assertFalse(repeated["data"]["created"])
@@ -125,11 +128,19 @@ class ProjectRuntimeTests(unittest.TestCase):
                 "managed": True,
                 "active_flow": None,
                 "latest_gate": None,
+                "gate_config": {
+                    "configured": False,
+                    "check_count": 0,
+                    "required_count": 0,
+                },
             },
         )
         self.assertEqual(
             result["next_action"],
-            {"tool": "flow_start", "reason_code": "project_ready"},
+            {
+                "tool": "gate_configure",
+                "reason_code": "gate_configuration_required",
+            },
         )
         self.assertNotIn(str(self.project_root), json.dumps(result))
 

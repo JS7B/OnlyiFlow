@@ -58,6 +58,7 @@ def evaluate_model_case(
     after: dict,
     expected_after: dict,
     require_confirmation: bool = False,
+    required_response_terms: list[str] | None = None,
 ) -> tuple[str, list[str], dict]:
     tools = called_tools(process.stdout)
     evidence = {
@@ -103,6 +104,11 @@ def evaluate_model_case(
         re.IGNORECASE,
     ):
         reasons.append("owner_confirmation_not_requested")
+    response = assistant_output(process.stdout).casefold()
+    if required_response_terms and any(
+        term.casefold() not in response for term in required_response_terms
+    ):
+        reasons.append("gate_proposal_details_missing")
     if reasons:
         evidence["assistant_excerpt"] = assistant_excerpt(process.stdout)
     return ("passed" if not reasons else "failed"), reasons, evidence
@@ -122,6 +128,14 @@ def source_state() -> dict:
     }
 
 
+def gate_configuration_snapshot(project: Path) -> dict:
+    snapshot = project_snapshot(project)
+    status = Runtime().project_status(str(project))
+    if not status["ok"]:
+        raise RuntimeError("gate_configuration_status_failed")
+    return {**snapshot, "gate_config": status["data"]["gate_config"]}
+
+
 def run_model_case(
     *,
     case_id: str,
@@ -133,6 +147,7 @@ def run_model_case(
     state_reader,
     timeout_seconds: int,
     require_confirmation: bool = False,
+    required_response_terms: list[str] | None = None,
 ) -> dict:
     process = run_process(
         claude_command(
@@ -152,6 +167,7 @@ def run_model_case(
         after=after,
         expected_after=expected_after,
         require_confirmation=require_confirmation,
+        required_response_terms=required_response_terms,
     )
     return {
         "id": case_id,
@@ -200,8 +216,6 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
     baseline_marketplaces = list_marketplaces(prefix, REPOSITORY_ROOT, timeout_seconds)
     require_clean_baseline(baseline_plugins, baseline_marketplaces, owned_cache)
     baseline_unrelated = unrelated_state(baseline_plugins, baseline_marketplaces)
-    if source_state()["managed"]:
-        raise RuntimeError("source_repository_is_managed")
 
     report = {
         "status": "failed",
@@ -242,17 +256,46 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
         report["inventory"] = installed_inventory(plugin_root)
 
         unmanaged = temporary_root / "unmanaged project 中文"
+        gate_project = temporary_root / "gate configuration project 中文"
         managed = temporary_root / "managed project 中文"
         unmanaged.mkdir()
+        gate_project.mkdir()
         managed.mkdir()
-        for project in (unmanaged, managed):
+        for project in (unmanaged, gate_project, managed):
             (project / "app.py").write_text(
                 "def normalize_cache_key(value):\n    return str(value).strip()\n",
                 encoding="utf-8",
             )
+        (gate_project / "tests").mkdir()
+        (gate_project / "tests/test_app.py").write_text(
+            (
+                "import unittest\n"
+                "from app import normalize_cache_key\n\n"
+                "class CacheKeyTests(unittest.TestCase):\n"
+                "    def test_normalizes_whitespace(self):\n"
+                "        self.assertEqual(normalize_cache_key(' value '), 'value')\n"
+            ),
+            encoding="utf-8",
+        )
+        gate_initialized = Runtime().project_init(str(gate_project))
+        if not gate_initialized["ok"]:
+            raise RuntimeError("gate_project_init_failed")
         initialized = Runtime().project_init(str(managed))
         if not initialized["ok"]:
             raise RuntimeError("managed_project_init_failed")
+        configured = Runtime().gate_configure(
+            str(managed),
+            [
+                {
+                    "id": "tests",
+                    "required": True,
+                    "command": [sys.executable, "-c", "pass"],
+                    "timeout_seconds": 10,
+                }
+            ],
+        )
+        if not configured["ok"]:
+            raise RuntimeError("managed_gate_configuration_failed")
 
         report["marketplace_source_retained_during_sessions"] = True
 
@@ -272,6 +315,59 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
                 state_reader=lambda: project_snapshot(unmanaged),
                 timeout_seconds=timeout_seconds,
                 require_confirmation=True,
+            )
+        )
+        if report["results"][-1]["status"] != "passed":
+            raise RuntimeError("model_case_not_passed")
+
+        gate_before = gate_configuration_snapshot(gate_project)
+        report["results"].append(
+            run_model_case(
+                case_id="gate-configuration-owner-request",
+                project=gate_project,
+                prompt=(
+                    "/onlyiflow:onlyiflow start a quick flow for the cache-key bug. "
+                    "The Gate is unconfigured. Propose one required check named tests "
+                    "using `python -m unittest discover -s tests -v` with a 120-second "
+                    "timeout, then stop for owner confirmation before configuring it."
+                ),
+                expected_tools=["project_status"],
+                before=gate_before,
+                expected_after=gate_before,
+                state_reader=lambda: gate_configuration_snapshot(gate_project),
+                timeout_seconds=timeout_seconds,
+                require_confirmation=True,
+                required_response_terms=["tests", "python", "120"],
+            )
+        )
+        if report["results"][-1]["status"] != "passed":
+            raise RuntimeError("model_case_not_passed")
+
+        gate_confirmed_before = gate_configuration_snapshot(gate_project)
+        gate_confirmed_after = {
+            **gate_confirmed_before,
+            "gate_config": {
+                "configured": True,
+                "check_count": 1,
+                "required_count": 1,
+            },
+        }
+        report["results"].append(
+            run_model_case(
+                case_id="gate-configuration-owner-confirmation",
+                project=gate_project,
+                prompt=(
+                    "/onlyiflow:onlyiflow I confirm the unchanged project's Gate "
+                    "configuration: id tests, required true, command tokens "
+                    '["python", "-m", "unittest", "discover", "-s", '
+                    '"tests", "-v"], timeout 120 seconds. Configure it now and '
+                    "stop before flow_start."
+                ),
+                expected_tools=["project_status", "gate_configure"],
+                before=gate_confirmed_before,
+                expected_after=gate_confirmed_after,
+                state_reader=lambda: gate_configuration_snapshot(gate_project),
+                timeout_seconds=timeout_seconds,
             )
         )
         if report["results"][-1]["status"] != "passed":
@@ -374,7 +470,7 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
         report["error_code"] = "model_acceptance_failed"
     if (
         execution_error is None
-        and len(statuses) == 4
+        and len(statuses) == 6
         and all(status == "passed" for status in statuses)
         and not report["cleanup_errors"]
         and report["unrelated_state_unchanged"]
@@ -398,7 +494,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPOSITORY_ROOT / "build" / "v020-claude-user-install-acceptance.json",
+        default=REPOSITORY_ROOT / "build" / "v030-claude-user-install-acceptance.json",
     )
     return parser.parse_args()
 

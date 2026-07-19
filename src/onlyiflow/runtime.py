@@ -13,7 +13,12 @@ from .domain import (
     validate_risk,
     validate_text,
 )
-from .gates import load_gate_checks, run_gate_checks
+from .gates import (
+    configure_gate_checks,
+    gate_config_summary,
+    load_gate_checks,
+    run_gate_checks,
+)
 from .paths import (
     INITIALIZATION_ENTRIES,
     normalize_expected_files,
@@ -28,6 +33,9 @@ class Runtime:
 
     def project_init(self, project_root: str) -> Payload:
         return self._execute(lambda: self._project_init(project_root))
+
+    def gate_configure(self, project_root: str, checks: list[dict]) -> Payload:
+        return self._execute(lambda: self._gate_configure(project_root, checks))
 
     def flow_start(self, project_root: str, risk: str, title: str) -> Payload:
         return self._execute(lambda: self._flow_start(project_root, risk, title))
@@ -77,13 +85,15 @@ class Runtime:
 
         store = ProjectStore(paths)
         active_flow = store.active_flow()
+        gate_config = gate_config_summary(store.paths.config)
         return success(
             {
                 "managed": True,
                 "active_flow": active_flow,
                 "latest_gate": store.latest_gate(),
+                "gate_config": gate_config,
             },
-            self._status_next_action(active_flow),
+            self._status_next_action(active_flow, gate_config),
         )
 
     def _project_init(self, project_root: str) -> Payload:
@@ -94,11 +104,62 @@ class Runtime:
                 "created": created,
                 "entries": INITIALIZATION_ENTRIES,
             },
-            {"tool": "flow_start", "reason_code": "project_ready"},
+            {
+                "tool": "gate_configure",
+                "reason_code": "gate_configuration_required",
+            },
+        )
+
+    def _gate_configure(self, project_root: str, raw_checks: list[dict]) -> Payload:
+        store = self._managed_store(project_root)
+        active_flow = store.active_flow()
+        gate_config = gate_config_summary(store.paths.config)
+        if active_flow is not None and gate_config["configured"]:
+            raise DomainError(
+                code="gate_config_locked",
+                message="Gate configuration cannot change while a flow is active.",
+                retryable=True,
+                next_action={
+                    "tool": "project_status",
+                    "reason_code": "resume_active_flow",
+                },
+            )
+        checks = configure_gate_checks(store.paths.config, raw_checks)
+        return success(
+            {
+                "checks": [
+                    {
+                        "check_id": check.check_id,
+                        "required": check.required,
+                        "timeout_seconds": check.timeout_seconds,
+                    }
+                    for check in checks
+                ],
+                "check_count": len(checks),
+                "required_count": sum(check.required for check in checks),
+            },
+            self._status_next_action(
+                active_flow,
+                {
+                    "configured": True,
+                    "check_count": len(checks),
+                    "required_count": sum(check.required for check in checks),
+                },
+            ),
         )
 
     def _flow_start(self, project_root: str, risk: str, title: str) -> Payload:
         store = self._managed_store(project_root)
+        if not gate_config_summary(store.paths.config)["configured"]:
+            raise DomainError(
+                code="gate_checks_missing",
+                message="No gate checks are configured.",
+                retryable=True,
+                next_action={
+                    "tool": "gate_configure",
+                    "reason_code": "gate_configuration_required",
+                },
+            )
         normalized_risk = validate_risk(risk)
         normalized_title = validate_text(
             title,
@@ -235,7 +296,16 @@ class Runtime:
             )
         return ProjectStore(paths)
 
-    def _status_next_action(self, flow: dict | None) -> dict[str, str] | None:
+    def _status_next_action(
+        self,
+        flow: dict | None,
+        gate_config: dict,
+    ) -> dict[str, str] | None:
+        if not gate_config["configured"]:
+            return {
+                "tool": "gate_configure",
+                "reason_code": "gate_configuration_required",
+            }
         if flow is None:
             return {"tool": "flow_start", "reason_code": "project_ready"}
         return {

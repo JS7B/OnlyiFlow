@@ -23,6 +23,12 @@ class GateRuntimeTests(unittest.TestCase):
         self.project_root.mkdir()
         self.runtime = Runtime()
         self.assertTrue(self.runtime.project_init(str(self.project_root))["ok"])
+        self.assertTrue(
+            self.runtime.gate_configure(
+                str(self.project_root),
+                [self.python_check("tests", required=True, exit_code=0)],
+            )["ok"]
+        )
         self.flow = self.runtime.flow_start(
             str(self.project_root),
             risk="quick",
@@ -169,6 +175,7 @@ class GateRuntimeTests(unittest.TestCase):
     def test_gate_requires_valid_nonempty_configuration_and_implementing_flow(
         self,
     ) -> None:
+        self.write_checks([])
         missing_checks = self.runtime.gate_run(str(self.project_root), self.flow["id"])
         self.assert_error(missing_checks, "gate_checks_missing")
 
@@ -283,6 +290,8 @@ timeout_seconds = 10
     ) -> None:
         root = project_root or self.project_root
         lines = ["version = 1"]
+        if not checks:
+            lines.append("checks = []")
         for check in checks:
             lines.extend(
                 [
@@ -321,6 +330,12 @@ timeout_seconds = 10
         project = Path(self.temporary.name) / name
         project.mkdir()
         self.assertTrue(self.runtime.project_init(str(project))["ok"])
+        self.assertTrue(
+            self.runtime.gate_configure(
+                str(project),
+                [self.python_check("tests", required=True, exit_code=0)],
+            )["ok"]
+        )
         return project
 
     @property

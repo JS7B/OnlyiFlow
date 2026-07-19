@@ -30,7 +30,7 @@ class ClaudeUserInstallAcceptanceTests(unittest.TestCase):
         self.assertNotIn("assistant_excerpt", evidence)
 
     def test_ordinary_case_passes_only_with_zero_calls_and_zero_mutation(self) -> None:
-        process = self.result(self.assistant_event("Version 0.2.0."))
+        process = self.result(self.assistant_event("Version 0.3.0."))
 
         status, reasons, evidence = evaluate_model_case(
             process=process,
@@ -43,6 +43,43 @@ class ClaudeUserInstallAcceptanceTests(unittest.TestCase):
         self.assertEqual(status, "passed")
         self.assertEqual(reasons, [])
         self.assertEqual(evidence["tool_mentions"], [])
+
+    def test_gate_proposal_requires_the_owner_visible_check_details(self) -> None:
+        incomplete = self.result(
+            self.tool_event("project_status"),
+            self.assistant_event("Please confirm the Gate."),
+        )
+
+        status, reasons, _ = evaluate_model_case(
+            process=incomplete,
+            expected_tools=["project_status"],
+            before={"gate_config": {"configured": False}},
+            after={"gate_config": {"configured": False}},
+            expected_after={"gate_config": {"configured": False}},
+            require_confirmation=True,
+            required_response_terms=["tests", "python", "120"],
+        )
+
+        self.assertEqual(status, "failed")
+        self.assertEqual(reasons, ["gate_proposal_details_missing"])
+
+        complete = self.result(
+            self.tool_event("project_status"),
+            self.assistant_event(
+                "Confirm required check tests: python -m unittest, timeout 120 seconds."
+            ),
+        )
+        status, reasons, _ = evaluate_model_case(
+            process=complete,
+            expected_tools=["project_status"],
+            before={"gate_config": {"configured": False}},
+            after={"gate_config": {"configured": False}},
+            expected_after={"gate_config": {"configured": False}},
+            require_confirmation=True,
+            required_response_terms=["tests", "python", "120"],
+        )
+        self.assertEqual(status, "passed")
+        self.assertEqual(reasons, [])
 
     def test_unexpected_call_and_state_are_both_reported(self) -> None:
         process = self.result(
@@ -111,7 +148,7 @@ class ClaudeUserInstallAcceptanceTests(unittest.TestCase):
     def test_missing_installed_tools_in_chinese_is_infrastructure_error(self) -> None:
         process = self.result(
             self.assistant_event(
-                "OnlyiFlow 的七个 MCP 工具没有出现在工具列表中，project_status 不可用。"
+                "OnlyiFlow 的八个 MCP 工具没有出现在工具列表中，project_status 不可用。"
             )
         )
 

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import os
 import re
 import subprocess
+import tempfile
 import time
 import tomllib
 from dataclasses import dataclass
@@ -26,6 +29,21 @@ class GateCheck:
 
 
 def load_gate_checks(config_path: Path) -> list[GateCheck]:
+    checks = load_gate_configuration(config_path)
+    if not checks:
+        raise DomainError(
+            code="gate_checks_missing",
+            message="No gate checks are configured.",
+            retryable=True,
+            next_action={
+                "tool": "gate_configure",
+                "reason_code": "gate_configuration_required",
+            },
+        )
+    return checks
+
+
+def load_gate_configuration(config_path: Path) -> list[GateCheck]:
     try:
         with config_path.open("rb") as source:
             config = tomllib.load(source)
@@ -37,13 +55,69 @@ def load_gate_checks(config_path: Path) -> list[GateCheck]:
     raw_checks = config.get("checks")
     if not isinstance(raw_checks, list):
         raise gate_config_invalid()
-    if not raw_checks:
-        raise DomainError(
-            code="gate_checks_missing",
-            message="No gate checks are configured.",
-            retryable=True,
+    return _validate_gate_checks(raw_checks, allow_empty=True)
+
+
+def configure_gate_checks(config_path: Path, raw_checks: list[dict]) -> list[GateCheck]:
+    checks = _validate_gate_checks(raw_checks, allow_empty=False)
+    content = serialize_gate_configuration(checks)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=config_path.parent,
+            prefix=".config.toml.",
+            suffix=".tmp",
+            delete=False,
+        ) as destination:
+            temporary_path = Path(destination.name)
+            destination.write(content)
+            destination.flush()
+            os.fsync(destination.fileno())
+        os.replace(temporary_path, config_path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    return checks
+
+
+def gate_config_summary(config_path: Path) -> dict:
+    checks = load_gate_configuration(config_path)
+    return {
+        "configured": bool(checks),
+        "check_count": len(checks),
+        "required_count": sum(check.required for check in checks),
+    }
+
+
+def serialize_gate_configuration(checks: list[GateCheck]) -> str:
+    lines = ["version = 1"]
+    for check in checks:
+        lines.extend(
+            [
+                "",
+                "[[checks]]",
+                f"id = {json.dumps(check.check_id)}",
+                f"required = {str(check.required).lower()}",
+                f"command = {json.dumps(check.command)}",
+                f"timeout_seconds = {check.timeout_seconds}",
+            ]
         )
-    if len(raw_checks) > MAX_CHECKS:
+    return "\n".join(lines) + "\n"
+
+
+def _validate_gate_checks(
+    raw_checks: list[dict],
+    *,
+    allow_empty: bool,
+) -> list[GateCheck]:
+    if (
+        not isinstance(raw_checks, list)
+        or (not allow_empty and not raw_checks)
+        or len(raw_checks) > MAX_CHECKS
+    ):
         raise gate_config_invalid()
 
     checks: list[GateCheck] = []

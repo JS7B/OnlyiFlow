@@ -1,8 +1,8 @@
 # OnlyiFlow Engineering Specification
 
-Date: 2026-07-18
+Date: 2026-07-19
 
-Status: Normative engineering specification for the OnlyiFlow 0.2.0 release candidate
+Status: Normative engineering specification for the OnlyiFlow 0.3.0 release
 
 ## Greenfield Rule
 
@@ -92,9 +92,9 @@ Responsibilities:
 - `domain.py`: risk parsing, states, and transitions only.
 - `paths.py`: explicit project-root validation and local paths.
 - `storage.py`: schema, sessions, and focused repositories.
-- `gates.py`: configured process execution and compact evidence.
-- `runtime.py`: project, flow, spec, gate, and landing operations.
-- `mcp_server.py`: seven tool registrations and MCP error/result mapping.
+- `gates.py`: Gate validation, atomic configuration, process execution, and compact evidence.
+- `runtime.py`: project, Gate configuration, flow, spec, Gate, and landing operations.
+- `mcp_server.py`: eight tool registrations and MCP error/result mapping.
 - `server/stdio.py`: add the plugin-owned `src` directory to import resolution and start stdio.
 
 Do not add new runtime modules unless a focused failing test and a current product requirement
@@ -103,7 +103,7 @@ justify the split.
 ## Python And Dependency Boundary
 
 - Python 3.11+ is the only implementation language in the first increment.
-- `pyproject.toml` declares version `0.2.0`, Python `>=3.11`, setuptools, and
+- `pyproject.toml` declares version `0.3.0`, Python `>=3.11`, setuptools, and
   `fastmcp>=3.4,<4`.
 - `requirements.txt` contains the same runtime dependency list for users who prepare an existing
   environment without installing the project package.
@@ -173,7 +173,8 @@ landing_request(gate_passed) -> waiting_owner
 ```
 
 `flow_start` is an explicit runtime operation, not a transport shortcut. For quick work it creates
-and claims the flow atomically so the product's two-call budget is real.
+and claims the flow atomically so the product's two-call budget is real. It first requires a valid,
+non-empty Gate configuration; rejection leaves the project flow-free.
 
 ## Tool Inventory
 
@@ -183,6 +184,7 @@ Expose exactly:
 | --- | --- | --- |
 | `project_status` | no | Return managed state, the one active flow if present, latest gate state, and one next action. |
 | `project_init` | yes | Create the small project-local state boundary after owner confirmation. |
+| `gate_configure` | yes | Atomically replace all Gate checks after separate owner confirmation and before a flow starts. |
 | `flow_start` | yes | Create a quick, standard, or deep flow; quick enters implementation atomically. |
 | `spec_submit` | yes | Store one compact standard/deep spec. |
 | `flow_claim` | yes | Claim a ready standard/deep flow. |
@@ -202,6 +204,8 @@ Important constraints include:
 - `risk`: enum `quick | standard | deep`;
 - title, goal, acceptance, and boundaries: trimmed non-empty strings with bounded size;
 - expected files: bounded, unique project-relative paths;
+- Gate checks: one to 32 closed objects with a unique ID, required flag, one to 32 command tokens,
+  and a timeout from one to 900 seconds;
 - no generic arbitrary metadata object.
 
 Invalid input, invalid transition, unmanaged mutation, active-flow conflict, missing flow, failed
@@ -273,6 +277,19 @@ Check IDs use lowercase letters, digits, underscores, or hyphens and are unique
 case-insensitively. Commands contain one to 32 non-empty argument tokens, and timeouts are between
 one and 900 seconds. Invalid or empty configuration fails without guessing a project toolchain.
 
+`gate_configure` accepts a complete replacement list when the project is managed and has no active
+flow. It also accepts the first non-empty list for a legacy active flow whose configuration is
+empty; after that first write, the normal active-flow lock applies. Validation completes before any
+write. The implementation writes UTF-8 TOML to a temporary file in the state directory, flushes
+it, and uses a same-filesystem atomic replacement; validation or replacement failure preserves the
+previous configuration bytes and removes the temporary file. Its response contains only check
+IDs, required flags, timeouts, and counts.
+
+`project_status` returns `gate_config` with `configured`, `check_count`, and `required_count`.
+An empty configuration yields `gate_configure` as the one next action, including for a legacy
+active flow. With no active flow, a valid non-empty configuration yields `flow_start`; after a
+legacy flow receives its first Gate, status resumes that flow's state-specific action.
+
 Persist and return only:
 
 ```text
@@ -297,11 +314,13 @@ The Skill:
 
 1. calls `project_status` once;
 2. asks before `project_init` when unmanaged;
-3. starts or resumes the one active flow;
-4. leaves exploration, editing, debugging, and test strategy to the host;
-5. invokes `gate_run` only when the user asks to check or land;
-6. invokes `landing_request` only after a passed gate;
-7. reports one state and one next action, then stops.
+3. presents a complete Gate proposal and waits for a separate owner-confirmation turn;
+4. invokes `gate_configure` only after that confirmation;
+5. starts or resumes the one active flow;
+6. leaves exploration, editing, debugging, and test strategy to the host;
+7. invokes `gate_run` only when the user asks to check or land;
+8. invokes `landing_request` only after a passed gate;
+9. reports one state and one next action, then stops.
 
 It does not create self-tracking TODOs, invoke another methodology Skill, spawn subagents, require a
 worktree, or run subjective review loops.
@@ -351,7 +370,8 @@ Implementation uses tests first. Required suites include:
 - unmanaged read/no-write tests;
 - project initialization tests;
 - one-active-flow concurrency tests;
-- exact seven-tool inventory and deterministic order;
+- exact eight-tool inventory and deterministic order;
+- Gate configuration validation, atomic replacement, readiness, and active-flow locking;
 - closed input and output schemas;
 - success and error MCP result mapping;
 - gate privacy tests;
@@ -365,5 +385,6 @@ No unit test uses a real model, user credential, user-level plugin mutation, or 
 
 Release evidence covers transitions, initialization, concurrency, schemas, copied stdio runtime,
 malformed input, Gate privacy, landing, enabled/disabled Skill behavior, efficiency budgets,
-configured Gate value, and all three host lifecycles. Historical execution details belong in
+owner-confirmed Gate configuration, configured Gate value, and all three host lifecycles.
+Historical execution details belong in
 `docs/evaluations/`, not in this normative specification.

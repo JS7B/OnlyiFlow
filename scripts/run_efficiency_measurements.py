@@ -334,30 +334,29 @@ def prepare_project(project: Path, task_name: str, *, managed: bool) -> None:
 
 
 def write_gate_config(project: Path) -> None:
-    command = json.dumps(
+    result = Runtime().gate_configure(
+        str(project),
         [
-            sys.executable,
-            "-s",
-            "-B",
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            "tests",
-            "-v",
-        ]
+            {
+                "id": "regression",
+                "required": True,
+                "command": [
+                    sys.executable,
+                    "-s",
+                    "-B",
+                    "-m",
+                    "unittest",
+                    "discover",
+                    "-s",
+                    "tests",
+                    "-v",
+                ],
+                "timeout_seconds": 60,
+            }
+        ],
     )
-    (project / ".onlyiflow/config.toml").write_text(
-        (
-            "version = 1\n\n"
-            "[[checks]]\n"
-            'id = "regression"\n'
-            "required = true\n"
-            f"command = {command}\n"
-            "timeout_seconds = 60\n"
-        ),
-        encoding="utf-8",
-    )
+    if not result["ok"]:
+        raise MeasurementFailure("fixture_gate_configuration_failed")
 
 
 def regression_passed(project: Path) -> bool:

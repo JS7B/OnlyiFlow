@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import signal
 import subprocess
 import tempfile
@@ -22,6 +23,7 @@ from scripts.run_skill_evaluations import (
     cli_prefix,
     cleanup_evaluation_workspace,
     codex_command,
+    codex_home,
     codex_skill_prompt,
     evaluate_case,
     event_types,
@@ -32,6 +34,12 @@ from scripts.run_skill_evaluations import (
 
 
 class SkillEvaluationRunnerTests(unittest.TestCase):
+    def test_codex_home_honors_an_isolated_lifecycle_root(self) -> None:
+        isolated = Path(tempfile.gettempdir()) / "OnlyiFlow isolated Codex home"
+
+        with patch.dict(os.environ, {"CODEX_HOME": str(isolated)}):
+            self.assertEqual(codex_home(), isolated)
+
     def test_workspace_cleanup_retries_transient_windows_lock(self) -> None:
         locked = PermissionError("directory is temporarily in use")
         with (

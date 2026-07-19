@@ -80,6 +80,43 @@ ExpectedFiles = Annotated[
         }
     ),
 ]
+GateChecks = Annotated[
+    list[dict[str, object]],
+    WithJsonSchema(
+        {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+                    },
+                    "required": {"type": "boolean"},
+                    "command": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                        },
+                    },
+                    "timeout_seconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 900,
+                    },
+                },
+                "required": ["id", "required", "command", "timeout_seconds"],
+                "additionalProperties": False,
+            },
+        }
+    ),
+]
 
 READ_ONLY = {
     "readOnlyHint": True,
@@ -103,6 +140,7 @@ MUTATION = {
 TOOL_NAMES = [
     "project_status",
     "project_init",
+    "gate_configure",
     "flow_start",
     "spec_submit",
     "flow_claim",
@@ -248,6 +286,29 @@ LATEST_GATE_SCHEMA = {
     "required": ["flow_id", "passed", "checks"],
     "additionalProperties": False,
 }
+GATE_CONFIG_STATUS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "configured": {"type": "boolean"},
+        "check_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        "required_count": {"type": "integer", "minimum": 0, "maximum": 32},
+    },
+    "required": ["configured", "check_count", "required_count"],
+    "additionalProperties": False,
+}
+GATE_CONFIGURED_CHECK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "check_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+        },
+        "required": {"type": "boolean"},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 900},
+    },
+    "required": ["check_id", "required", "timeout_seconds"],
+    "additionalProperties": False,
+}
 
 
 def response_schema(data_schema: dict) -> dict:
@@ -300,8 +361,14 @@ PROJECT_STATUS_OUTPUT = response_schema(
                     "latest_gate": {
                         "anyOf": [LATEST_GATE_SCHEMA, {"type": "null"}],
                     },
+                    "gate_config": GATE_CONFIG_STATUS_SCHEMA,
                 },
-                "required": ["managed", "active_flow", "latest_gate"],
+                "required": [
+                    "managed",
+                    "active_flow",
+                    "latest_gate",
+                    "gate_config",
+                ],
                 "additionalProperties": False,
             },
         ]
@@ -315,6 +382,23 @@ PROJECT_INIT_OUTPUT = response_schema(
             "entries": INITIALIZATION_ENTRIES_SCHEMA,
         },
         "required": ["created", "entries"],
+        "additionalProperties": False,
+    }
+)
+GATE_CONFIGURE_OUTPUT = response_schema(
+    {
+        "type": "object",
+        "properties": {
+            "checks": {
+                "type": "array",
+                "items": GATE_CONFIGURED_CHECK_SCHEMA,
+                "minItems": 1,
+                "maxItems": 32,
+            },
+            "check_count": {"type": "integer", "minimum": 1, "maximum": 32},
+            "required_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        },
+        "required": ["checks", "check_count", "required_count"],
         "additionalProperties": False,
     }
 )
@@ -387,6 +471,16 @@ def project_status(project_root: ProjectRoot) -> ToolResult:
 )
 def project_init(project_root: ProjectRoot) -> ToolResult:
     return tool_result(runtime.project_init(project_root))
+
+
+@mcp.tool(
+    name="gate_configure",
+    description="Replace the deterministic Gate checks before a flow starts.",
+    output_schema=GATE_CONFIGURE_OUTPUT,
+    annotations=IDEMPOTENT_MUTATION,
+)
+def gate_configure(project_root: ProjectRoot, checks: GateChecks) -> ToolResult:
+    return tool_result(runtime.gate_configure(project_root, checks))
 
 
 @mcp.tool(

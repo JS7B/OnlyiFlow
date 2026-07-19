@@ -13,6 +13,7 @@ from scripts.build_loader_candidates import build_candidates
 EXPECTED_TOOLS = [
     "project_status",
     "project_init",
+    "gate_configure",
     "flow_start",
     "spec_submit",
     "flow_claim",
@@ -61,6 +62,17 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(expected_files["minItems"], 1)
         self.assertEqual(expected_files["maxItems"], 100)
         self.assertIs(expected_files["uniqueItems"], True)
+        gate_checks = by_name["gate_configure"]["properties"]["checks"]
+        self.assertEqual(gate_checks["minItems"], 1)
+        self.assertEqual(gate_checks["maxItems"], 32)
+        gate_check = gate_checks["items"]
+        self.assertIs(gate_check["additionalProperties"], False)
+        self.assertEqual(
+            gate_check["required"],
+            ["id", "required", "command", "timeout_seconds"],
+        )
+        self.assertEqual(gate_check["properties"]["command"]["maxItems"], 32)
+        self.assertEqual(gate_check["properties"]["timeout_seconds"]["maximum"], 900)
 
     async def test_complete_standard_flow_through_real_stdio(self) -> None:
         project_root = self.temporary_root / "managed project with spaces"
@@ -77,6 +89,28 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
                 "project_init", {"project_root": str(project_root)}
             )
             self.assert_result(initialized, expected_ok=True)
+
+            executable = shutil.which("where.exe")
+            self.assertIsNotNone(executable)
+            configured = await client.call_tool(
+                "gate_configure",
+                {
+                    "project_root": str(project_root),
+                    "checks": [
+                        {
+                            "id": "tests",
+                            "required": True,
+                            "command": [executable, "cmd.exe"],
+                            "timeout_seconds": 10,
+                        }
+                    ],
+                },
+            )
+            self.assert_result(configured, expected_ok=True)
+            self.assertNotIn(
+                executable,
+                json.dumps(configured.structured_content),
+            )
 
             started = await client.call_tool(
                 "flow_start",
@@ -95,7 +129,7 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
                     "project_root": str(project_root),
                     "flow_id": flow_id,
                     "goal": "Prove the runtime contract.",
-                    "acceptance": "All seven tools complete through stdio.",
+                    "acceptance": "All eight tools complete through stdio.",
                     "boundaries": "No host configuration mutation.",
                     "expected_files": ["src/onlyiflow/runtime.py"],
                 },
@@ -108,7 +142,6 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assert_result(claimed, expected_ok=True)
 
-            self.write_passing_gate(project_root)
             gated = await client.call_tool(
                 "gate_run",
                 {"project_root": str(project_root), "flow_id": flow_id},
@@ -151,6 +184,7 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
         for result in [
             status,
             initialized,
+            configured,
             started,
             submitted,
             claimed,
@@ -186,23 +220,6 @@ class McpContractTests(unittest.IsolatedAsyncioTestCase):
                 Path(tempfile.mkdtemp(prefix="OnlyiFlow MCP contract "))
             )
         return self.temporary_paths[0]
-
-    def write_passing_gate(self, project_root: Path) -> None:
-        executable = shutil.which("where.exe")
-        self.assertIsNotNone(executable)
-        command = json.dumps([executable, "cmd.exe"])
-        (project_root / ".onlyiflow/config.toml").write_text(
-            (
-                "version = 1\n"
-                "\n"
-                "[[checks]]\n"
-                'id = "tests"\n'
-                "required = true\n"
-                f"command = {command}\n"
-                "timeout_seconds = 10\n"
-            ),
-            encoding="utf-8",
-        )
 
     def assert_result(self, result: object, *, expected_ok: bool) -> None:
         structured = result.structured_content

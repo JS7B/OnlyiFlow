@@ -25,11 +25,12 @@ from scripts.run_skill_evaluations import cli_prefix, run_process  # noqa: E402
 PLUGIN_ID = "onlyiflow@onlyiflow-local"
 PLUGIN_NAME = "onlyiflow"
 MARKETPLACE_NAME = "onlyiflow-local"
-RELEASE_VERSION = "0.2.0"
-UPDATE_VERSION = "0.2.1-test.1"
+RELEASE_VERSION = "0.3.0"
+UPDATE_VERSION = "0.3.1-test.1"
 EXPECTED_TOOLS = [
     "project_status",
     "project_init",
+    "gate_configure",
     "flow_start",
     "spec_submit",
     "flow_claim",
@@ -239,6 +240,21 @@ async def prove_cached_runtime(
             {"project_root": str(project_root)},
         )
         require_tool_ok(initialized, "project_init")
+        configured = await client.call_tool(
+            "gate_configure",
+            {
+                "project_root": str(project_root),
+                "checks": [
+                    {
+                        "id": "tests",
+                        "required": True,
+                        "command": ["python", "-c", "pass"],
+                        "timeout_seconds": 10,
+                    }
+                ],
+            },
+        )
+        require_tool_ok(configured, "gate_configure")
         started = await client.call_tool(
             "flow_start",
             {
@@ -553,7 +569,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPOSITORY_ROOT / "build" / "v020-claude-user-install-lifecycle.json",
+        default=REPOSITORY_ROOT / "build" / "v030-claude-user-install-lifecycle.json",
     )
     return parser.parse_args()
 

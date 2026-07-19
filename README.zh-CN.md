@@ -2,111 +2,190 @@
 
 简体中文 | [English](README.md)
 
-OnlyiFlow 是一个小型个人开发流程插件，供一位所有者在 Codex、Claude Code 和 ZCode 中使用。
+OnlyiFlow 是面向 Codex、Claude Code 和 ZCode 的项目级开发工作流插件。它由一个显式调用的
+Skill、一个确定性的本地 stdio MCP 服务器，以及基于 SQLite 的工作流状态存储组成。
 
-它有意将可移植的产品边界限定为：
+宿主编码代理负责规划、实现、调试和测试；OnlyiFlow 负责协调流程状态、确定性质量 Gate 和落地
+证据。
 
-```text
-一个仅在明确请求时调用的 Skill
-一个确定性的本地 stdio MCP 服务器
-本地 SQLite 流程与 Gate 状态
-```
+## 核心能力
 
-宿主编码代理仍然负责理解、规划、编辑、调试和测试代码。OnlyiFlow 只记录明确的工作流状态和
-确定性的落地证据。它不会安装 Hooks、拦截代理事件、管理代理配置、运行后台进程，也不会声称
-能够控制直接执行的 Git 命令。
+- 经所有者确认后初始化项目级工作流状态。
+- 经单独的所有者确认后配置确定性项目 Gate。
+- 根据变更风险启动 `quick`、`standard` 或 `deep` 流程。
+- 记录精简规格和明确的实现认领状态。
+- 执行配置的质量检查并保存结构化 Gate 证据。
+- 在全部必需检查通过后生成面向所有者的落地请求。
+- 在 Codex、Claude Code 和 ZCode 宿主包中提供一致的工作流语义。
 
-## 当前状态
+## 发布状态
 
-版本 `0.1.0` 仍是经过验证的 GitHub 正式版本。`0.2.0` 候选版本保持相同的工作流运行时，并新增
-本地 Claude Marketplace，以便在一个 Windows 用户帐户下跨项目进行持久的 `user` 范围安装。
-该候选版本已经提交到 `main`，但在所有者另行授权前不会创建标签或正式发布。
+当前 GitHub 正式版本为 `v0.3.0`。该版本包含 Claude Code `user` 范围持久安装、经所有者确认的
+Gate 配置、项目就绪状态，以及针对 Gate 仍为空的旧版活动流程的受限升级路径。
 
-Claude 安装要求 Python 3.11 或更高版本、`requirements.txt` 中声明的依赖，以及一个持续保留的、
-已解压本地 Marketplace 目录。它不是免环境方案、跨计算机配置、npm 软件包或公开 Marketplace
-发布。多个活动流程仍不在范围内。
+0.3.0 正式版本已通过本地验证、Claude 安装与发布冒烟验收，以及由所有者协助完成的 ZCode
+生命周期验证。保留的本地 Codex 安装当前解析为 0.3.0 并保持启用；所有者已延期 Codex 0.3.0
+在线模型验证。
 
-Claude 和 Codex 已通过完整的激活、效率/Gate 与发布冒烟测试契约。由所有者协助完成的 ZCode
-冒烟测试也通过了相同的普通请求隔离、所有者确认初始化、快速流程、Gate 失败/通过、落地和卸载
-语义。
+既有 Claude 与 Codex 发布基线已通过完整的激活、效率/Gate 与发布冒烟测试契约。由所有者协助
+完成的 ZCode 0.3.0 生命周期验证已覆盖普通请求隔离、所有者确认初始化、快速流程执行、Gate
+失败与通过、落地和卸载。
 
-验证结束后，不会遗留 OnlyiFlow 插件、Skill、MCP 暴露、版本化缓存文件、临时工作区或运行时
-进程。ZCode 仅按设计保留由所有者添加、但尚未安装的本地 Marketplace 来源；它会显示在“发现”
-页面中，并带有“获取”操作。
-
-完整的 15 项审计和已接受报告的哈希记录在发布就绪证据中。所有者已于 2026-07-17 授权该
-GitHub 版本；其中不包含任何公开插件 Marketplace 发布。
-
-请勿直接导入仓库源码根目录。不同宿主的发现机制并不相同，因此应通过
-`scripts/build_loader_candidates.py` 在 `build/loader-candidates/` 下生成相互隔离的候选包。
-
-此源码树之外的旧仓库只能作为参考资料。本仓库不会继承其中的适配器、Hook、Attention、事件
-采集或能力探测架构。
+完整验收记录见
+[v0.3.0 Gate 配置证据](docs/evaluations/2026-07-19-v0.3.0-gate-configuration.md)、
+[v0.2.0 Claude 安装证据](docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md)
+和 [v0.1.0 发布就绪审计](docs/evaluations/2026-07-17-task7-release-readiness.md)。
 
 ## 运行要求
 
-OnlyiFlow 不要求使用特定的环境管理器或环境名称。请选择任意 Python 3.11+ 环境，并确保宿主
-进程能够找到该环境的 `python` 命令。如果使用 Conda，请自行选择并激活环境，再安装依赖并启动
-宿主。
+- Python 3.11 或更高版本
+- `requirements.txt` 中声明的软件包
+- Codex、Claude Code 或 ZCode
+- 从源码构建宿主包时所需的本地仓库检出
 
-所需软件包列在 `requirements.txt` 中。从源码检出目录安装时，请将它们安装到所选环境：
+请选择任意 Python 环境，并确保宿主进程能够找到该环境的 `python` 命令。将运行依赖安装到
+所选环境：
 
 ```powershell
+python --version
 python -m pip install -r requirements.txt
 ```
 
-使用 Claude 发布压缩包时，请使用保留的 Marketplace 目录中随附的副本：
+## 构建宿主包
+
+在仓库根目录生成相互隔离的宿主包：
+
+```powershell
+python -B scripts\build_loader_candidates.py
+```
+
+该命令生成：
+
+```text
+build/loader-candidates/codex-marketplace/
+build/loader-candidates/claude-marketplace/
+build/loader-candidates/zcode/
+```
+
+每次全新构建应使用空的输出目录。各宿主的生成目录均为自包含结构。
+
+## 安装与启动
+
+### Codex
+
+将 `<codex>` 替换为可用的 Codex CLI 命令，将 `<仓库根目录>` 替换为本仓库的绝对路径：
+
+```powershell
+<codex> plugin marketplace add "<仓库根目录>\build\loader-candidates\codex-marketplace" --json
+<codex> plugin add onlyiflow@onlyiflow-dev --json
+```
+
+新建 Codex 任务，然后调用：
+
+```text
+$onlyiflow:onlyiflow
+```
+
+### Claude Code
+
+将 `build/loader-candidates/claude-marketplace/` 复制或解压到稳定的本地目录。将
+`<保留的-Claude-Marketplace目录>` 替换为该目录：
 
 ```powershell
 python -m pip install -r "<保留的-Claude-Marketplace目录>\plugins\onlyiflow\requirements.txt"
+claude plugin marketplace add "<保留的-Claude-Marketplace目录>" --scope user
+claude plugin install onlyiflow@onlyiflow-local --scope user
 ```
+
+在目标项目中新建 Claude Code 会话，然后调用：
+
+```text
+/onlyiflow:onlyiflow
+```
+
+### ZCode
+
+1. 打开“插件管理”，选择“添加插件市场”。
+2. 选择 `build/loader-candidates/zcode/`。
+3. 从本地 Marketplace 安装 `onlyiflow`。
+4. 在目标项目中新建任务，并显式调用 OnlyiFlow Skill。
+
+完整的安装、更新、卸载和验证流程见[发布指南](docs/release-guide.md)。
+
+## 执行工作流
+
+调用 OnlyiFlow 时同时说明预期动作，例如：
+
+```text
+$onlyiflow:onlyiflow 为缓存键问题启动 quick 流程
+/onlyiflow:onlyiflow 为身份认证变更启动 standard 流程
+```
+
+项目首次使用流程：
+
+1. OnlyiFlow 报告项目状态。
+2. 宿主展示项目级状态条目并请求所有者确认。
+3. 确认后，OnlyiFlow 初始化项目。
+4. 宿主提出 Gate 检查方案，并等待单独的所有者确认。
+5. OnlyiFlow 保存确认后的 Gate 配置，再启动指定流程。
+6. 宿主代理实现并测试变更，OnlyiFlow 同步记录流程状态。
+7. 明确提出 `check` 后执行配置的 Gate。
+8. Gate 通过后，明确提出 `land` 以记录落地交接。
+
+`quick` 流程直接进入实现阶段；`standard` 流程使用一份精简规格；`deep` 流程在详细规划前增加
+一次所有者确认。
+
+如果升级后的项目已经存在活动流程，但 Gate 仍为空，OnlyiFlow 会通过相同的方案展示与单独
+所有者确认边界完成首次 Gate 配置，然后恢复该流程。活动流程的已配置 Gate 始终保持锁定。
+
+## 状态与工具模型
+
+已纳管项目的状态保存在：
+
+```text
+<project>/.onlyiflow/
+  onlyiflow.db
+  config.toml
+  specs/
+```
+
+Skill 协调以下八个确定性 MCP 工具：
+
+```text
+project_status
+project_init
+gate_configure
+flow_start
+spec_submit
+flow_claim
+gate_run
+landing_request
+```
+
+每个工具都会解析明确的项目根目录，并返回稳定的结构化结果以及至多一个下一步动作。
 
 ## 仓库分层
 
-规范文件：
+产品契约：
 
-- `docs/product-spec.md`：产品行为与非目标；
-- `docs/engineering-spec.md`：运行时、持久化、传输、打包与测试契约；
-- `docs/release-guide.md`：所有者安装、验证、清理和授权流程。
+- `docs/product-spec.md`：行为、流程语义与产品范围
+- `docs/engineering-spec.md`：运行时、持久化、传输、打包与测试契约
+- `docs/release-guide.md`：安装、生命周期、验证与发布流程
 
-产品与打包实现：
+实现：
 
-- `src/onlyiflow/` 和 `server/stdio.py`：交付的确定性运行时；
-- `packaging/`：宿主清单和仅供手动调用的 Skill 包装模板；
-- `scripts/build_loader_candidates.py`：生成宿主包的脚本。
+- `src/onlyiflow/`：领域、存储、Gate 与工作流运行时
+- `server/stdio.py`：插件本地 stdio 服务器引导程序
+- `packaging/`：宿主清单与 Skill 资源
+- `scripts/build_loader_candidates.py`：宿主包构建器
 
-验证工具：
+验证与证据：
 
-- `tests/`：确定性的单元、契约、打包和 runner 测试；
+- `tests/`：单元、契约、打包和 runner 测试
 - `scripts/run_skill_evaluations.py`、`scripts/run_efficiency_measurements.py` 和
-  `scripts/run_release_smoke.py`：不会复制到插件中的发布证据 runner。
-
-证据与历史：
-
-- `docs/research/`、`docs/plans/` 和 `docs/evaluations/`：观察记录、执行历史与已接受报告引用；
-- `build/task*-*-results/` 下被忽略的 JSON 报告：可在本地复现的证据产物。
-
-证据层中的任务编号、机器观察、探针和历史失败并不是产品要求。如果证据与规范文件不一致，
-以产品规范和工程规范为准。
-
-## 文档
-
-- [产品规范](docs/product-spec.md)
-- [工程规范](docs/engineering-spec.md)
-- [三宿主加载器研究契约](docs/research/2026-07-16-three-host-loader-contract.md)
-- [插件优先基础计划](docs/plans/2026-07-16-plugin-first-framework-foundation.md)
-- [所有者安装与发布指南](docs/release-guide.md)
-- [Claude 用户范围安装计划](docs/plans/2026-07-18-v0.2.0-claude-user-install.md)
-
-生成的插件候选目录：
-
-- `build/loader-candidates/codex-marketplace/`
-- `build/loader-candidates/claude-marketplace/`
-- `build/loader-candidates/zcode/`（ZCode 本地 Marketplace 根目录；插件位于 `onlyiflow/` 下）
+  `scripts/run_release_smoke.py`：发布证据 runner
+- `docs/research/`、`docs/plans/` 和 `docs/evaluations/`：研究、执行计划与已接受证据
 
 ## 产品核心规则
 
 > 宿主代理负责实现。OnlyiFlow 负责明确的工作流状态和确定性的落地证据。
-
-如果没有外部的分支保护、CI 或由所有者安装的 Git hook，OnlyiFlow 无法阻止代理或用户直接运行
-`git push`、`git merge` 或其他落地命令。

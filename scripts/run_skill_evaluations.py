@@ -36,6 +36,7 @@ CLAUDE_CANDIDATE = (
 TOOLS = (
     "project_status",
     "project_init",
+    "gate_configure",
     "flow_start",
     "spec_submit",
     "flow_claim",
@@ -52,6 +53,11 @@ UNAVAILABLE_PATTERN = re.compile(
     r"unknown|not found|disabled|unavailable|no such skill|invalid command",
     re.IGNORECASE,
 )
+
+
+def codex_home() -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    return Path(configured) if configured else Path.home() / ".codex"
 
 
 @dataclass(frozen=True)
@@ -302,6 +308,7 @@ def prepare_project(project: Path, setup: str) -> dict:
 
     initialized = runtime.project_init(str(project))
     require_ok(initialized)
+    configure_passing_gate(runtime, project)
     if setup == "managed":
         return project_snapshot(project)
     if setup == "ready":
@@ -331,7 +338,6 @@ def prepare_project(project: Path, setup: str) -> dict:
                 title="Evaluation gate flow",
             )
         )
-        write_passing_gate(project)
         return project_snapshot(project)
     raise ValueError(f"Unknown evaluation setup: {setup}")
 
@@ -342,22 +348,22 @@ def require_ok(result: dict) -> dict:
     return result["data"]
 
 
-def write_passing_gate(project: Path) -> None:
+def configure_passing_gate(runtime: Runtime, project: Path) -> None:
     where = shutil.which("where.exe")
     if where is None:
         raise RuntimeError("where.exe is required for the deterministic gate fixture.")
-    command = json.dumps([where, "cmd.exe"])
-    (project / ".onlyiflow/config.toml").write_text(
-        (
-            "version = 1\n"
-            "\n"
-            "[[checks]]\n"
-            'id = "tests"\n'
-            "required = true\n"
-            f"command = {command}\n"
-            "timeout_seconds = 10\n"
-        ),
-        encoding="utf-8",
+    require_ok(
+        runtime.gate_configure(
+            str(project),
+            [
+                {
+                    "id": "tests",
+                    "required": True,
+                    "command": [where, "cmd.exe"],
+                    "timeout_seconds": 10,
+                }
+            ],
+        )
     )
 
 
@@ -722,7 +728,7 @@ class CodexLifecycle:
                 errors.append(str(error))
         try:
             self.assert_absent()
-            cache = Path.home() / ".codex/plugins/cache/onlyiflow-dev"
+            cache = codex_home() / "plugins/cache/onlyiflow-dev"
             if cache.exists():
                 if any(cache.iterdir()):
                     raise RuntimeError(

@@ -1,8 +1,8 @@
 # OnlyiFlow Product Specification
 
-Date: 2026-07-18
+Date: 2026-07-19
 
-Status: Normative specification for the OnlyiFlow 0.2.0 release candidate
+Status: Normative specification for the OnlyiFlow 0.3.0 release
 
 ## Product Definition
 
@@ -46,6 +46,7 @@ The target user is one AI full-stack developer who:
 - Keep local state inspectable and project-scoped.
 - Make quick, standard, and deep work observably different in ceremony.
 - Run deterministic configured gates and return compact evidence.
+- Require owner-confirmed Gate configuration before a new flow can start.
 - Keep human landing approval outside model-callable MCP tools.
 - Behave consistently across Codex, Claude Code, and ZCode even when package metadata differs.
 - Support persistent Claude Code user-scope installation across projects on one Windows account.
@@ -94,7 +95,8 @@ For narrow, low-risk work.
 
 - No spec.
 - No generated plan, TODO list, worktree, or review loop.
-- In an already managed project, implementation begins after `project_status` and `flow_start`.
+- In an already managed, Gate-configured project, implementation begins after `project_status`
+  and `flow_start`.
 - `flow_start` atomically creates and claims the flow.
 
 ### standard
@@ -139,6 +141,25 @@ Only after confirmation may `project_init` create:
 Initialization is excluded from steady-state quick-flow latency measurements and is tested as a
 separate first-use path.
 
+## Gate Configuration
+
+Initialization creates an empty version-1 Gate configuration. Before the first flow starts, the
+Skill presents the proposed check IDs, required flags, tokenized commands, and timeouts, then waits
+for a new owner-confirmation turn.
+
+After confirmation, `gate_configure` replaces the complete check list. It accepts one to 32 unique
+checks, writes only after all checks validate, and returns check IDs, required flags, timeouts, and
+counts without echoing commands. Configuration replacement is allowed only for a managed project
+with no active flow. The one migration exception is an active flow created by an earlier version
+whose Gate remains empty: after a separate owner confirmation, it may receive its first non-empty
+Gate and resume its existing state action. An unconfigured project reports `gate_configure` as its
+only next action and rejects a new `flow_start`; a configured project with no active flow reports
+`flow_start`.
+
+Gate configuration does not start a process, access the network, install a dependency, or invoke a
+model. Command text is retained only in `config.toml`; it is excluded from SQLite, domain events,
+MCP output, and Gate evidence.
+
 ## Flow Model
 
 The MVP allows at most one non-terminal flow per managed project.
@@ -168,7 +189,8 @@ landing_request(gate_passed)     -> waiting_owner
 ```
 
 Starting another flow while one is non-terminal returns a structured conflict. The server never
-guesses which flow is active.
+guesses which flow is active. Starting any flow before Gate configuration returns a structured
+`gate_checks_missing` error and keeps the project flow-free.
 
 ## Gate And Landing Boundary
 
@@ -194,11 +216,12 @@ documentation must state this limitation wherever landing safety is described.
 
 ## Portable MCP Surface
 
-The first increment exposes exactly seven tools:
+The 0.3.0 release exposes exactly eight tools:
 
 ```text
 project_status
 project_init
+gate_configure
 flow_start
 spec_submit
 flow_claim
@@ -214,6 +237,8 @@ adapter lifecycle tool is exposed.
 - Enabling the plugin without invoking it adds no MCP call and no workflow turn.
 - Ten representative ordinary coding prompts produce zero OnlyiFlow activation.
 - Five explicit OnlyiFlow prompts work in all three hosts.
+- Invalid Gate configuration leaves the existing configuration byte-for-byte unchanged.
+- Active flows prevent Gate reconfiguration.
 - A managed quick flow reaches implementation in no more than two MCP calls.
 - Quick creates no spec or planning artifact.
 - Standard creates exactly one compact spec before claim.
@@ -223,7 +248,7 @@ adapter lifecycle tool is exposed.
 
 ## Release Boundary
 
-Claude Code 0.2.0 distribution is one local Marketplace installed at `user` scope. The extracted
+Claude Code 0.3.0 distribution is one local Marketplace installed at `user` scope. The extracted
 Marketplace directory and a user-selected Python 3.11+ environment containing the dependencies
 listed in `requirements.txt` must remain available while the plugin is installed. OnlyiFlow does
 not prescribe Conda, virtualenv, a system interpreter, or an environment name. Installation does

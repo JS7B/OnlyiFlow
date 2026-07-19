@@ -24,6 +24,7 @@ DESCRIPTION = (
 APPROVED_TOOLS = [
     "project_status",
     "project_init",
+    "gate_configure",
     "flow_start",
     "spec_submit",
     "flow_claim",
@@ -82,9 +83,17 @@ class SkillContractTests(unittest.TestCase):
             "Use the host's native tool search exactly once for the literal query "
             "`project_status`, then invoke the returned tool.",
             "Never inspect or modify `.onlyiflow` directly; all workflow state reads and "
-            "changes must use the seven MCP tools.",
+            "changes must use the eight MCP tools.",
             "Never call `project_init` on the first unmanaged turn.",
             "Only call `project_init` after a new owner confirmation turn.",
+            "Never call `gate_configure` before a new owner confirmation turn.",
+            "Present the proposed check IDs, required flags, commands, and timeouts, then "
+            "stop for owner confirmation.",
+            "After confirmation, call `gate_configure` once and follow its returned next "
+            "action. For a project with no active flow, report that the Gate is ready "
+            "and make `flow_start` the one next action.",
+            "For an unconfigured legacy active flow, resume the returned active-flow "
+            "action. Never replace a configured Gate while a flow is active.",
             "Do not call `gate_run` unless the user explicitly asks to check or land.",
             "An explicit `check` is complete owner authorization to call `gate_run`. When "
             "`project_status` returns an `implementing` flow, call `gate_run` in the same "

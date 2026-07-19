@@ -1,6 +1,6 @@
 # OnlyiFlow Owner Installation And Release Guide
 
-Version: 0.2.0
+Version: 0.3.0
 
 Status: verified release-candidate guide; tagging and release require owner approval
 
@@ -140,7 +140,7 @@ unless the owner separately authorizes mutation.
 
 1. Open Plugin Management and choose Add Marketplace.
 2. Select the directory `build/loader-candidates/zcode/`.
-3. Confirm its root `marketplace.json` exposes only `onlyiflow` 0.2.0.
+3. Confirm its root `marketplace.json` exposes only `onlyiflow` 0.3.0.
 4. Select `获取`/install on the OnlyiFlow card.
 5. Confirm one OnlyiFlow Skill and the OnlyiFlow MCP server are visible.
 6. Invoke OnlyiFlow explicitly and run the required owner-confirmed workflow.
@@ -159,8 +159,17 @@ Ordinary coding prompts must not invoke OnlyiFlow. On the first explicit request
 1. `project_status` reports that the project is unmanaged and creates nothing.
 2. The host explains the exact `.onlyiflow/` entries and waits.
 3. Only after owner confirmation may `project_init` create local state.
-4. A managed quick flow reaches `implementing` through `project_status` then `flow_start` and creates
-   no spec.
+4. The host presents the proposed Gate check IDs, required flags, commands, and timeouts, then
+   waits for a separate owner-confirmation turn.
+5. After confirmation, `gate_configure` atomically stores the complete Gate list without returning
+   command text.
+6. A configured quick flow reaches `implementing` through `project_status` then `flow_start` and
+   creates no spec.
+
+When upgrading a project that already has an active flow but still has an empty Gate,
+`project_status` returns `gate_configure`. Apply the same proposal and separate owner-confirmation
+turn, then resume the action returned for that flow. A configured Gate cannot be replaced while a
+flow is active.
 
 OnlyiFlow state is project-local:
 
@@ -200,13 +209,17 @@ claude plugin validate build\loader-candidates\claude-marketplace\plugins\onlyif
 python -B scripts\build_loader_candidates.py --output-root "<fresh-empty-output-root>"
 ```
 
-Run the Claude user-scope lifecycle and model-backed acceptance sequentially. A network or model
-timeout is infrastructure evidence, not a product failure; stop after the first infrastructure
-failure instead of retrying blindly.
+Run the Claude user-scope lifecycle, installed-plugin acceptance, and release smoke sequentially.
+Run the Codex release smoke only after the owner authorizes its temporary plugin lifecycle and any
+existing OnlyiFlow installation has been safely removed or otherwise dispositioned. Never run the
+two model-backed host smokes concurrently. A network or model timeout is infrastructure evidence,
+not a product failure; stop after the first infrastructure failure instead of retrying blindly.
 
 ```powershell
 python -B scripts\run_claude_user_install_lifecycle.py --timeout-seconds 600
 python -B scripts\run_claude_user_install_acceptance.py --timeout-seconds 600
+python -B scripts\run_release_smoke.py --host claude --timeout-seconds 600
+python -B scripts\run_release_smoke.py --host codex --timeout-seconds 600 --allow-codex-plugin-lifecycle
 ```
 
 The automated reports do not replace the owner-assisted ZCode lifecycle and behavioral smoke.
@@ -221,8 +234,10 @@ Authoritative evidence is recorded in:
 - activation evaluation: `docs/evaluations/2026-07-16-task4-skill-evaluation.md`;
 - efficiency and Gate value: `docs/evaluations/2026-07-17-task5-efficiency-and-gate-value.md`;
 - three-host release smoke: `docs/evaluations/2026-07-17-task6-three-host-release-smoke.md`;
-- release readiness: `docs/evaluations/2026-07-17-task7-release-readiness.md`; and
-- Claude user-scope installation: `docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`.
+- release readiness: `docs/evaluations/2026-07-17-task7-release-readiness.md`;
+- Claude user-scope installation: `docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md`; and
+- 0.3.0 Gate configuration release:
+  `docs/evaluations/2026-07-19-v0.3.0-gate-configuration.md`.
 
 Tag creation, GitHub Release creation, publication, and any public marketplace release require
 separate owner approval. Passing automated checks alone is not that approval.

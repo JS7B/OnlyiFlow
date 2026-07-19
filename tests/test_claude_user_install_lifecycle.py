@@ -106,7 +106,7 @@ class ClaudeUserInstallLifecycleTests(unittest.TestCase):
         manifest_path.parent.mkdir(parents=True)
         marketplace_path.parent.mkdir(parents=True, exist_ok=True)
         manifest_path.write_text(
-            json.dumps({"name": "onlyiflow", "version": "0.2.0"}),
+            json.dumps({"name": "onlyiflow", "version": "0.3.0"}),
             encoding="utf-8",
         )
         marketplace_path.write_text(
@@ -117,7 +117,7 @@ class ClaudeUserInstallLifecycleTests(unittest.TestCase):
                         {
                             "name": "onlyiflow",
                             "source": "./plugins/onlyiflow",
-                            "version": "0.2.0",
+                            "version": "0.3.0",
                         }
                     ],
                 }
@@ -125,20 +125,20 @@ class ClaudeUserInstallLifecycleTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        bump_marketplace_version(marketplace_root, "0.2.1-test.1")
+        bump_marketplace_version(marketplace_root, "0.3.1-test.1")
 
         self.assertEqual(
             json.loads(manifest_path.read_text(encoding="utf-8"))["version"],
-            "0.2.1-test.1",
+            "0.3.1-test.1",
         )
         marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
         self.assertEqual(
             marketplace["plugins"][0]["version"],
-            "0.2.1-test.1",
+            "0.3.1-test.1",
         )
         self.assertEqual(
             (plugin_root / ".onlyiflow-test-version").read_text(encoding="utf-8"),
-            "0.2.1-test.1\n",
+            "0.3.1-test.1\n",
         )
 
     def test_unrelated_state_excludes_only_exact_onlyiflow_entries(self) -> None:

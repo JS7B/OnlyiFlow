@@ -16,6 +16,24 @@ from scripts.run_release_smoke import (
 
 
 class Task6ReleaseSmokeTests(unittest.TestCase):
+    def test_release_smoke_requires_owner_confirmed_gate_configuration(self) -> None:
+        self.assertEqual(
+            EXPECTED_SEQUENCES["gate_configuration_request"],
+            ("project_status",),
+        )
+        self.assertEqual(
+            EXPECTED_SEQUENCES["gate_configuration_confirmation"],
+            ("project_status", "gate_configure"),
+        )
+        self.assertIn(
+            "gate_configuration_waited_for_confirmation",
+            REQUIRED_CHECKS,
+        )
+        runner = (
+            Path(__file__).resolve().parents[1] / "scripts/run_release_smoke.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("write_gate_config(project)", runner)
+
     def test_report_requires_every_check_sequence_and_cleanup(self) -> None:
         checks = {check: True for check in REQUIRED_CHECKS}
         sequences = {label: list(tools) for label, tools in EXPECTED_SEQUENCES.items()}

@@ -32,13 +32,13 @@ from scripts.run_efficiency_measurements import (  # noqa: E402
     run_turn,
     source_snapshot,
     task5_host_command,
-    write_gate_config,
 )
 from scripts.run_skill_evaluations import (  # noqa: E402
     CLAUDE_CANDIDATE,
     CodexLifecycle,
     cli_prefix,
 )
+from onlyiflow.runtime import Runtime  # noqa: E402
 
 
 RESULTS_ROOT = REPOSITORY_ROOT / "build/task6-release-smoke-results"
@@ -46,6 +46,8 @@ EXPECTED_SEQUENCES = {
     "ordinary": (),
     "initialization_request": ("project_status",),
     "initialization_confirmation": ("project_status", "project_init"),
+    "gate_configuration_request": ("project_status",),
+    "gate_configuration_confirmation": ("project_status", "gate_configure"),
     "quick_start": ("project_status", "flow_start"),
     "implementation": (),
     "failed_gate": ("project_status", "gate_run"),
@@ -59,6 +61,7 @@ REQUIRED_CHECKS = (
     "plugin_loaded",
     "ordinary_zero_activity",
     "initialization_waited_for_confirmation",
+    "gate_configuration_waited_for_confirmation",
     "quick_reached_implementing",
     "implementation_host_owned",
     "gate_failed_then_passed",
@@ -116,6 +119,13 @@ def record_turn(
         edited=edited,
         label=label,
     )
+
+
+def gate_configuration_status(project: Path) -> dict:
+    result = Runtime().project_status(str(project))
+    if not result["ok"] or not result["data"].get("managed"):
+        raise ReleaseSmokeFailure("gate_configuration_status_failed")
+    return result["data"]["gate_config"]
 
 
 def run_loaded_smoke(
@@ -205,7 +215,65 @@ def run_loaded_smoke(
     )
     if not checks["initialization_waited_for_confirmation"]:
         raise ReleaseSmokeFailure("initialization_boundary_failed")
-    write_gate_config(project)
+
+    gate_configuration_request = run_turn(
+        host=host,
+        project=project,
+        prompt=(
+            f"{invocation} propose exactly one required Gate for this unchanged project: "
+            'ID regression, command ["python", "-s", "-B", "-m", '
+            '"unittest", "discover", "-s", "tests", "-v"], timeout '
+            "60 seconds. Show the complete proposal and stop before configuration."
+        ),
+        enabled=True,
+        explicit=True,
+        timeout_seconds=timeout_seconds,
+        codex_skill_path=codex_skill_path,
+    )
+    record_turn(
+        gate_configuration_request,
+        label="gate_configuration_request",
+        edited=False,
+        sequences=sequences,
+    )
+    remained_unconfigured = gate_configuration_status(project) == {
+        "configured": False,
+        "check_count": 0,
+        "required_count": 0,
+    }
+
+    gate_configuration_confirmation = run_turn(
+        host=host,
+        project=project,
+        prompt=(
+            f"{invocation} I confirm that exact Gate proposal: ID regression, required true, "
+            'command ["python", "-s", "-B", "-m", "unittest", '
+            '"discover", "-s", "tests", "-v"], timeout 60 seconds. '
+            "Configure it now and stop before starting a flow."
+        ),
+        enabled=True,
+        explicit=True,
+        timeout_seconds=timeout_seconds,
+        codex_skill_path=codex_skill_path,
+    )
+    record_turn(
+        gate_configuration_confirmation,
+        label="gate_configuration_confirmation",
+        edited=False,
+        sequences=sequences,
+    )
+    checks["gate_configuration_waited_for_confirmation"] = (
+        remained_unconfigured
+        and gate_configuration_status(project)
+        == {
+            "configured": True,
+            "check_count": 1,
+            "required_count": 1,
+        }
+        and database_evidence(project)["state"] is None
+    )
+    if not checks["gate_configuration_waited_for_confirmation"]:
+        raise ReleaseSmokeFailure("gate_configuration_boundary_failed")
 
     test_contents = (project / "tests/test_app.py").read_text(encoding="utf-8")
     quick_start = run_turn(

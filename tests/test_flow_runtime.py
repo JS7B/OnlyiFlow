@@ -22,6 +22,10 @@ class FlowRuntimeTests(unittest.TestCase):
         self.runtime = Runtime()
         initialized = self.runtime.project_init(str(self.project_root))
         self.assertTrue(initialized["ok"])
+        configured = self.runtime.gate_configure(
+            str(self.project_root), [self.gate_check()]
+        )
+        self.assertTrue(configured["ok"])
 
     def test_quick_flow_starts_implementing_without_spec(self) -> None:
         result = self.runtime.flow_start(
@@ -295,7 +299,18 @@ class FlowRuntimeTests(unittest.TestCase):
         project = Path(self.temporary.name) / name
         project.mkdir()
         self.assertTrue(self.runtime.project_init(str(project))["ok"])
+        self.assertTrue(
+            self.runtime.gate_configure(str(project), [self.gate_check()])["ok"]
+        )
         return project
+
+    def gate_check(self) -> dict:
+        return {
+            "id": "tests",
+            "required": True,
+            "command": ["python", "-c", "pass"],
+            "timeout_seconds": 10,
+        }
 
     @property
     def database(self) -> Path:

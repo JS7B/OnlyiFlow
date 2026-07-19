@@ -24,7 +24,7 @@ Keep this boundary:
    host's native tool search exactly once for the literal query `project_status`, then invoke the
    returned tool.
    Never inspect or modify `.onlyiflow` directly; all workflow state reads and changes must use
-   the seven MCP tools.
+   the eight MCP tools.
 4. Use the returned flow ID for every later tool call. If a flow is active, resume it and never call
    `flow_start` for another flow.
 5. On a structured error, report its state and returned next action, then stop instead of guessing.
@@ -43,7 +43,16 @@ project files in that same explicit OnlyiFlow turn.
 Never call `project_init` on the first unmanaged turn. Report the exact initialization entries,
 ask whether to initialize this project, and stop. Only call `project_init` after a new owner
 confirmation turn. Require the project to be unchanged. Then report the managed state with
-`flow_start` as the one next action and stop.
+`gate_configure` as the one next action and stop.
+
+When a managed project's Gate is not configured, use ordinary host inspection only to identify the
+project's existing verification commands. This normally occurs before the first flow, but can also
+occur while resuming a flow created by an earlier OnlyiFlow version. Present the proposed check
+IDs, required flags, commands, and timeouts, then stop for owner confirmation. Never call
+`gate_configure` before a new owner confirmation turn. After confirmation, call `gate_configure`
+once and follow its returned next action. For a project with no active flow, report that the Gate
+is ready and make `flow_start` the one next action. For an unconfigured legacy active flow, resume
+the returned active-flow action. Never replace a configured Gate while a flow is active.
 
 Choose the lowest justified risk:
 
