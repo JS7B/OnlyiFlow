@@ -39,7 +39,10 @@ TOOLS = (
     "gate_configure",
     "flow_start",
     "spec_submit",
+    "wave_plan_set",
     "flow_claim",
+    "work_package_status",
+    "work_package_record",
     "gate_run",
     "landing_request",
 )
@@ -53,6 +56,46 @@ UNAVAILABLE_PATTERN = re.compile(
     r"unknown|not found|disabled|unavailable|no such skill|invalid command",
     re.IGNORECASE,
 )
+WAVE_PACKAGES = [
+    {
+        "id": "P",
+        "slug": "implementation",
+        "title": "Normalize cache keys",
+        "purpose": "Update cache-key normalization.",
+        "baseline_assumptions": ["The public function name is stable."],
+        "wave": 0,
+        "dependencies": [],
+        "allowed_paths": ["app.py"],
+        "forbidden_paths": ["tests/"],
+        "deliverables": ["Normalized cache-key behavior."],
+        "non_goals": ["No test changes."],
+        "acceptance": ["Keys are trimmed and lowercased."],
+        "check_ids": ["tests"],
+        "runtime_boundaries": ["Offline local execution."],
+        "requires_authorization": [],
+        "requires_independent_review": False,
+        "condition": None,
+    },
+    {
+        "id": "Q",
+        "slug": "regression",
+        "title": "Add cache-key regression coverage",
+        "purpose": "Cover the normalized cache-key behavior.",
+        "baseline_assumptions": ["Integrated package P is the baseline."],
+        "wave": 1,
+        "dependencies": ["P"],
+        "allowed_paths": ["tests/"],
+        "forbidden_paths": ["app.py"],
+        "deliverables": ["Cache-key regression tests."],
+        "non_goals": ["No implementation changes."],
+        "acceptance": ["Tests cover surrounding whitespace and case."],
+        "check_ids": ["tests"],
+        "runtime_boundaries": ["Offline local execution."],
+        "requires_authorization": [],
+        "requires_independent_review": False,
+        "condition": None,
+    },
+]
 
 
 def codex_home() -> Path:
@@ -339,6 +382,43 @@ def prepare_project(project: Path, setup: str) -> dict:
             )
         )
         return project_snapshot(project)
+    if setup in {"wave_draft", "wave_implementing"}:
+        tests = project / "tests"
+        tests.mkdir()
+        (tests / "test_app.py").write_text(
+            "# Regression coverage belongs to package Q.\n",
+            encoding="utf-8",
+        )
+        flow = require_ok(
+            runtime.flow_start(
+                str(project),
+                risk="deep",
+                title="Normalize cache keys and add regression coverage",
+                mode="wave",
+            )
+        )["flow"]
+        if setup == "wave_draft":
+            return project_snapshot(project)
+        require_ok(
+            runtime.spec_submit(
+                str(project),
+                flow_id=flow["id"],
+                goal="Normalize cache keys and add regression coverage.",
+                acceptance="All packages integrate before the final Gate.",
+                boundaries="No dependency, host configuration, or Git changes.",
+                expected_files=["app.py", "tests/test_app.py"],
+            )
+        )
+        require_ok(
+            runtime.wave_plan_set(
+                str(project),
+                flow_id=flow["id"],
+                expected_revision=0,
+                packages=WAVE_PACKAGES,
+            )
+        )
+        require_ok(runtime.flow_claim(str(project), flow["id"]))
+        return project_snapshot(project)
     raise ValueError(f"Unknown evaluation setup: {setup}")
 
 
@@ -379,9 +459,14 @@ def project_snapshot(project: Path) -> dict:
         }
     with closing(sqlite3.connect(database)) as connection:
         flows = [
-            {"risk": risk, "state": state}
-            for risk, state in connection.execute(
-                "SELECT risk, state FROM flows ORDER BY created_at, id"
+            {"risk": risk, "state": state, "mode": "wave" if wave else "direct"}
+            for risk, state, wave in connection.execute(
+                """
+                SELECT flows.risk, flows.state, wave_plans.flow_id
+                FROM flows
+                LEFT JOIN wave_plans ON wave_plans.flow_id = flows.id
+                ORDER BY flows.created_at, flows.id
+                """
             )
         ]
         specs = connection.execute("SELECT COUNT(*) FROM specs").fetchone()[0]
@@ -389,12 +474,23 @@ def project_snapshot(project: Path) -> dict:
             "SELECT COUNT(DISTINCT run_id) FROM gates"
         ).fetchone()[0]
         events = connection.execute("SELECT COUNT(*) FROM domain_events").fetchone()[0]
+        wave_revision = connection.execute(
+            "SELECT MAX(revision) FROM wave_plans"
+        ).fetchone()[0]
+        work_packages = connection.execute(
+            """
+            SELECT COUNT(*) FROM work_packages
+            WHERE revision = (SELECT MAX(revision) FROM wave_plans)
+            """
+        ).fetchone()[0]
     return {
         "managed": True,
         "flows": flows,
         "specs": specs,
         "gate_runs": gate_runs,
         "events": events,
+        "wave_revision": wave_revision,
+        "work_packages": work_packages,
     }
 
 
@@ -567,7 +663,7 @@ def evaluate_case(
         return ("passed" if not reasons else "failed"), reasons, evidence
 
     if (
-        group in {"explicit", "deep"}
+        group in {"explicit", "deep", "wave"}
         and not tools
         and after == before
         and reported_project_status_unavailable(process.stdout)
@@ -603,6 +699,52 @@ def evaluate_case(
             reasons.append("deep_risk_not_reported")
         if not re.search(r"confirm|confirmation|确认", output):
             reasons.append("deep_owner_confirmation_not_requested")
+    elif group == "wave":
+        output = assistant_output(process.stdout).casefold()
+        if tools != case["expected_tools"]:
+            reasons.append("unexpected_onlyiflow_tool_sequence")
+        state = after["flows"][-1]["state"] if after["flows"] else None
+        if state != case["expected_state"]:
+            reasons.append("unexpected_flow_state")
+        if after["specs"] != case["expected_specs"]:
+            reasons.append("unexpected_spec_count")
+        if after["gate_runs"] != case["expected_gate_runs"]:
+            reasons.append("unexpected_gate_run_count")
+        if after["wave_revision"] != case["expected_wave_revision"]:
+            reasons.append("unexpected_wave_revision")
+        if after["work_packages"] != case["expected_package_count"]:
+            reasons.append("unexpected_work_package_count")
+
+        phase = case["phase"]
+        if phase == "proposal":
+            if after != before:
+                reasons.append("wave_proposal_mutated_before_confirmation")
+            if "deep" not in output or "wave" not in output:
+                reasons.append("wave_deep_mode_not_reported")
+            complete_plan_terms = [
+                r"goal|目标",
+                r"invariant|不变量",
+                r"non-goal|非目标",
+                r"package|工作包",
+                r"depend|依赖",
+                r"wave",
+                r"scope|范围",
+                r"accept|验收",
+                r"authori[stz]|授权",
+            ]
+            if any(not re.search(pattern, output) for pattern in complete_plan_terms):
+                reasons.append("wave_complete_plan_not_presented")
+            if not re.search(r"confirm|confirmation|确认", output):
+                reasons.append("wave_plan_confirmation_not_requested")
+        elif phase == "confirmation":
+            pass
+        elif phase == "incomplete_check":
+            if "gate_run" in tools:
+                reasons.append("wave_gate_called_before_packages_complete")
+            if after != before:
+                reasons.append("wave_check_mutated_incomplete_flow")
+        else:
+            raise ValueError(f"Unknown Wave evaluation phase: {phase}")
     else:
         raise ValueError(f"Unknown evaluation group: {group}")
     return ("passed" if not reasons else "failed"), reasons, evidence
@@ -801,8 +943,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--groups",
-        default="ordinary,explicit,deep",
-        help="Comma-separated subset of ordinary,explicit,deep.",
+        default="ordinary,explicit,deep,wave",
+        help="Comma-separated subset of ordinary,explicit,deep,wave.",
     )
     parser.add_argument("--case", help="Run one evaluation case ID.")
     parser.add_argument("--timeout-seconds", type=int, default=180)
@@ -817,8 +959,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     groups = [value.strip() for value in args.groups.split(",") if value.strip()]
-    if not groups or set(groups) - {"ordinary", "explicit", "deep"}:
-        raise SystemExit("--groups must contain ordinary, explicit, or deep.")
+    if not groups or set(groups) - {"ordinary", "explicit", "deep", "wave"}:
+        raise SystemExit("--groups must contain ordinary, explicit, deep, or wave.")
     if args.timeout_seconds < 30:
         raise SystemExit("--timeout-seconds must be at least 30.")
     if (

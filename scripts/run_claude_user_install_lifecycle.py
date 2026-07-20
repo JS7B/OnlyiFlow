@@ -25,15 +25,24 @@ from scripts.run_skill_evaluations import cli_prefix, run_process  # noqa: E402
 PLUGIN_ID = "onlyiflow@onlyiflow-local"
 PLUGIN_NAME = "onlyiflow"
 MARKETPLACE_NAME = "onlyiflow-local"
-RELEASE_VERSION = "0.3.0"
-UPDATE_VERSION = "0.3.1-test.1"
+EVIDENCE_LABEL = "v0.4.0-wave-candidate"
+PLUGIN_MANIFEST_VERSION = "0.4.0"
+LIFECYCLE_UPDATE_TEST_VERSION = "0.4.1-test.1"
+DEFAULT_REPORT = (
+    REPOSITORY_ROOT
+    / "build"
+    / "v0.4.0-wave-candidate-claude-user-install-lifecycle.json"
+)
 EXPECTED_TOOLS = [
     "project_status",
     "project_init",
     "gate_configure",
     "flow_start",
     "spec_submit",
+    "wave_plan_set",
     "flow_claim",
+    "work_package_status",
+    "work_package_record",
     "gate_run",
     "landing_request",
 ]
@@ -399,8 +408,9 @@ def run_lifecycle(marketplace_source: Path, timeout_seconds: int) -> dict:
 
     report = {
         "status": "failed",
-        "release_version": RELEASE_VERSION,
-        "update_version": UPDATE_VERSION,
+        "evidence_label": EVIDENCE_LABEL,
+        "plugin_manifest_version": PLUGIN_MANIFEST_VERSION,
+        "lifecycle_update_test_version": LIFECYCLE_UPDATE_TEST_VERSION,
         "steps": {},
         "unrelated_state_unchanged": False,
         "cleanup_errors": [],
@@ -429,8 +439,8 @@ def run_lifecycle(marketplace_source: Path, timeout_seconds: int) -> dict:
             plugin = require_plugin(
                 prefix, REPOSITORY_ROOT, timeout_seconds, enabled=True
             )
-            if plugin.get("version") != RELEASE_VERSION:
-                raise RuntimeError("installed_release_version_invalid")
+            if plugin.get("version") != PLUGIN_MANIFEST_VERSION:
+                raise RuntimeError("installed_plugin_manifest_version_invalid")
             plugin_root = Path(plugin["installPath"]).resolve()
             if not plugin_root.is_relative_to(owned_cache):
                 raise RuntimeError("installed_cache_path_invalid")
@@ -489,7 +499,10 @@ def run_lifecycle(marketplace_source: Path, timeout_seconds: int) -> dict:
             require_plugin(prefix, REPOSITORY_ROOT, timeout_seconds, enabled=True)
             report["steps"]["enabled"] = True
 
-            bump_marketplace_version(staged_marketplace, UPDATE_VERSION)
+            bump_marketplace_version(
+                staged_marketplace,
+                LIFECYCLE_UPDATE_TEST_VERSION,
+            )
             run_required(
                 "onlyiflow_marketplace_update",
                 commands["marketplace_update"],
@@ -505,7 +518,7 @@ def run_lifecycle(marketplace_source: Path, timeout_seconds: int) -> dict:
             updated = require_plugin(
                 prefix, REPOSITORY_ROOT, timeout_seconds, enabled=True
             )
-            if updated.get("version") != UPDATE_VERSION:
+            if updated.get("version") != LIFECYCLE_UPDATE_TEST_VERSION:
                 raise RuntimeError("updated_version_invalid")
             updated_root = Path(updated["installPath"]).resolve()
             if not updated_root.is_relative_to(owned_cache):
@@ -569,7 +582,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPOSITORY_ROOT / "build" / "v030-claude-user-install-lifecycle.json",
+        default=DEFAULT_REPORT,
     )
     return parser.parse_args()
 
@@ -582,6 +595,8 @@ def main() -> None:
     except Exception as error:  # noqa: BLE001 - emit bounded failure evidence.
         report = {
             "status": "failed",
+            "evidence_label": EVIDENCE_LABEL,
+            "plugin_manifest_version": PLUGIN_MANIFEST_VERSION,
             "error_type": type(error).__name__,
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)

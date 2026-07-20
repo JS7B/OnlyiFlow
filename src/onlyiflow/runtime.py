@@ -25,6 +25,12 @@ from .paths import (
     resolve_project_root,
 )
 from .storage import ProjectStore
+from .waves import (
+    normalize_packages,
+    normalize_record,
+    validate_flow_mode,
+    validate_package_id,
+)
 
 
 class Runtime:
@@ -37,8 +43,14 @@ class Runtime:
     def gate_configure(self, project_root: str, checks: list[dict]) -> Payload:
         return self._execute(lambda: self._gate_configure(project_root, checks))
 
-    def flow_start(self, project_root: str, risk: str, title: str) -> Payload:
-        return self._execute(lambda: self._flow_start(project_root, risk, title))
+    def flow_start(
+        self,
+        project_root: str,
+        risk: str,
+        title: str,
+        mode: str = "direct",
+    ) -> Payload:
+        return self._execute(lambda: self._flow_start(project_root, risk, title, mode))
 
     def spec_submit(
         self,
@@ -63,6 +75,62 @@ class Runtime:
     def flow_claim(self, project_root: str, flow_id: str) -> Payload:
         return self._execute(lambda: self._flow_claim(project_root, flow_id))
 
+    def wave_plan_set(
+        self,
+        project_root: str,
+        flow_id: str,
+        expected_revision: int,
+        packages: list[dict],
+    ) -> Payload:
+        return self._execute(
+            lambda: self._wave_plan_set(
+                project_root,
+                flow_id,
+                expected_revision,
+                packages,
+            )
+        )
+
+    def work_package_status(
+        self,
+        project_root: str,
+        flow_id: str,
+        package_id: str,
+    ) -> Payload:
+        return self._execute(
+            lambda: self._work_package_status(project_root, flow_id, package_id)
+        )
+
+    def work_package_record(
+        self,
+        project_root: str,
+        flow_id: str,
+        package_id: str,
+        action: str,
+        base_commit: str | None = None,
+        head_commit: str | None = None,
+        changed_files: list[str] | None = None,
+        checks: list[dict] | None = None,
+        known_limits: list[str] | None = None,
+        reason_code: str | None = None,
+        retryable: bool | None = None,
+    ) -> Payload:
+        return self._execute(
+            lambda: self._work_package_record(
+                project_root=project_root,
+                flow_id=flow_id,
+                package_id=package_id,
+                action=action,
+                base_commit=base_commit,
+                head_commit=head_commit,
+                changed_files=changed_files,
+                checks=checks,
+                known_limits=known_limits,
+                reason_code=reason_code,
+                retryable=retryable,
+            )
+        )
+
     def gate_run(self, project_root: str, flow_id: str) -> Payload:
         return self._execute(lambda: self._gate_run(project_root, flow_id))
 
@@ -86,14 +154,20 @@ class Runtime:
         store = ProjectStore(paths)
         active_flow = store.active_flow()
         gate_config = gate_config_summary(store.paths.config)
+        wave_plan = (
+            store.wave_plan_summary(active_flow["id"])
+            if active_flow is not None
+            else None
+        )
         return success(
             {
                 "managed": True,
                 "active_flow": active_flow,
                 "latest_gate": store.latest_gate(),
                 "gate_config": gate_config,
+                "wave_plan": wave_plan,
             },
-            self._status_next_action(active_flow, gate_config),
+            self._status_next_action(active_flow, gate_config, wave_plan),
         )
 
     def _project_init(self, project_root: str) -> Payload:
@@ -145,10 +219,21 @@ class Runtime:
                     "check_count": len(checks),
                     "required_count": sum(check.required for check in checks),
                 },
+                (
+                    store.wave_plan_summary(active_flow["id"])
+                    if active_flow is not None
+                    else None
+                ),
             ),
         )
 
-    def _flow_start(self, project_root: str, risk: str, title: str) -> Payload:
+    def _flow_start(
+        self,
+        project_root: str,
+        risk: str,
+        title: str,
+        mode: str,
+    ) -> Payload:
         store = self._managed_store(project_root)
         if not gate_config_summary(store.paths.config)["configured"]:
             raise DomainError(
@@ -161,6 +246,13 @@ class Runtime:
                 },
             )
         normalized_risk = validate_risk(risk)
+        normalized_mode = validate_flow_mode(mode)
+        if normalized_mode == "wave" and normalized_risk != "deep":
+            raise DomainError(
+                code="wave_mode_requires_deep",
+                message="Wave mode requires deep risk.",
+                retryable=True,
+            )
         normalized_title = validate_text(
             title,
             field="title",
@@ -176,7 +268,8 @@ class Runtime:
                 "state": state,
                 "created_at": timestamp,
                 "updated_at": timestamp,
-            }
+            },
+            mode=normalized_mode,
         )
         next_action = None
         if state == "draft":
@@ -215,10 +308,15 @@ class Runtime:
             ),
             "expected_files": normalize_expected_files(expected_files),
         }
-        store.submit_spec(
+        flow = store.submit_spec(
             flow_id=normalized_flow_id,
             spec=spec,
             submitted_at=utc_now(),
+        )
+        next_action = (
+            {"tool": "wave_plan_set", "reason_code": "wave_plan_required"}
+            if flow["mode"] == "wave"
+            else {"tool": "flow_claim", "reason_code": "flow_ready"}
         )
         return success(
             {
@@ -226,21 +324,146 @@ class Runtime:
                 "state": "ready",
                 "spec": spec,
             },
-            {"tool": "flow_claim", "reason_code": "flow_ready"},
+            next_action,
         )
 
     def _flow_claim(self, project_root: str, flow_id: str) -> Payload:
         store = self._managed_store(project_root)
+        normalized_flow_id = validate_flow_id(flow_id)
+        flow = store.get_flow(normalized_flow_id)
+        wave_plan = store.wave_plan_summary(normalized_flow_id)
+        if flow["mode"] == "wave" and (
+            wave_plan is None or not wave_plan["configured"]
+        ):
+            raise DomainError(
+                code="wave_plan_required",
+                message="A confirmed Wave plan is required before claim.",
+                retryable=True,
+                next_action={
+                    "tool": "wave_plan_set",
+                    "reason_code": "wave_plan_required",
+                },
+            )
         flow = store.claim_flow(
-            flow_id=validate_flow_id(flow_id),
+            flow_id=normalized_flow_id,
             claimed_at=utc_now(),
         )
-        return success({"flow": flow})
+        return success(
+            {"flow": flow},
+            (
+                self._wave_next_action(store.wave_plan_summary(normalized_flow_id))
+                if flow["mode"] == "wave"
+                else None
+            ),
+        )
+
+    def _wave_plan_set(
+        self,
+        project_root: str,
+        flow_id: str,
+        expected_revision: int,
+        packages: list[dict],
+    ) -> Payload:
+        store = self._managed_store(project_root)
+        normalized_flow_id = validate_flow_id(flow_id)
+        if (
+            not isinstance(expected_revision, int)
+            or isinstance(expected_revision, bool)
+            or expected_revision < 0
+        ):
+            raise DomainError(
+                code="wave_plan_revision_invalid",
+                message="Expected Wave plan revision must be a non-negative integer.",
+                retryable=True,
+            )
+        summary = store.set_wave_plan(
+            flow_id=normalized_flow_id,
+            expected_revision=expected_revision,
+            packages=normalize_packages(packages),
+            recorded_at=utc_now(),
+        )
+        flow = store.get_flow(normalized_flow_id)
+        next_action = (
+            {"tool": "flow_claim", "reason_code": "flow_ready"}
+            if flow["state"] == "ready"
+            else self._wave_next_action(summary)
+        )
+        return success(summary, next_action)
+
+    def _work_package_status(
+        self,
+        project_root: str,
+        flow_id: str,
+        package_id: str,
+    ) -> Payload:
+        store = self._managed_store(project_root, migrate=False)
+        normalized_flow_id = validate_flow_id(flow_id)
+        package = store.work_package(
+            normalized_flow_id,
+            validate_package_id(package_id),
+        )
+        return success(
+            {"flow_id": normalized_flow_id, "package": package},
+            self._package_next_action(package),
+        )
+
+    def _work_package_record(
+        self,
+        *,
+        project_root: str,
+        flow_id: str,
+        package_id: str,
+        action: str,
+        base_commit: str | None,
+        head_commit: str | None,
+        changed_files: list[str] | None,
+        checks: list[dict] | None,
+        known_limits: list[str] | None,
+        reason_code: str | None,
+        retryable: bool | None,
+    ) -> Payload:
+        store = self._managed_store(project_root)
+        normalized_flow_id = validate_flow_id(flow_id)
+        package, summary = store.record_package(
+            flow_id=normalized_flow_id,
+            package_id=validate_package_id(package_id),
+            record=normalize_record(
+                action=action,
+                base_commit=base_commit,
+                head_commit=head_commit,
+                changed_files=changed_files,
+                checks=checks,
+                known_limits=known_limits,
+                reason_code=reason_code,
+                retryable=retryable,
+            ),
+            recorded_at=utc_now(),
+        )
+        next_action = self._package_next_action(package)
+        if package["status"] in {"integrated", "deferred"}:
+            next_action = self._wave_next_action(summary)
+        return success(
+            {
+                "flow_id": normalized_flow_id,
+                "package": package,
+                "wave_plan": summary,
+            },
+            next_action,
+        )
 
     def _gate_run(self, project_root: str, flow_id: str) -> Payload:
         store = self._managed_store(project_root)
         normalized_flow_id = validate_flow_id(flow_id)
-        store.require_gate_runnable(normalized_flow_id)
+        flow = store.require_gate_runnable(normalized_flow_id)
+        if flow["mode"] == "wave" and not store.wave_plan_complete(normalized_flow_id):
+            raise DomainError(
+                code="wave_packages_incomplete",
+                message="All current Wave packages must be integrated or deferred first.",
+                retryable=True,
+                next_action=self._wave_next_action(
+                    store.wave_plan_summary(normalized_flow_id)
+                ),
+            )
         checks = load_gate_checks(store.paths.config)
         evidence = run_gate_checks(checks, store.paths.root)
         passed = all(check["passed"] for check in evidence if check["required"])
@@ -282,7 +505,9 @@ class Runtime:
             }
         )
 
-    def _managed_store(self, project_root: str) -> ProjectStore:
+    def _managed_store(
+        self, project_root: str, *, migrate: bool = True
+    ) -> ProjectStore:
         paths = resolve_project_root(project_root)
         if not paths.is_managed():
             raise DomainError(
@@ -294,12 +519,16 @@ class Runtime:
                     "reason_code": "owner_confirmation_required",
                 },
             )
-        return ProjectStore(paths)
+        store = ProjectStore(paths)
+        if migrate:
+            store.ensure_schema()
+        return store
 
     def _status_next_action(
         self,
         flow: dict | None,
         gate_config: dict,
+        wave_plan: dict | None,
     ) -> dict[str, str] | None:
         if not gate_config["configured"]:
             return {
@@ -308,6 +537,24 @@ class Runtime:
             }
         if flow is None:
             return {"tool": "flow_start", "reason_code": "project_ready"}
+        if flow["mode"] == "wave":
+            if flow["state"] == "draft":
+                return {"tool": "spec_submit", "reason_code": "spec_required"}
+            if flow["state"] == "ready":
+                if wave_plan is None or not wave_plan["configured"]:
+                    return {
+                        "tool": "wave_plan_set",
+                        "reason_code": "wave_plan_required",
+                    }
+                return {"tool": "flow_claim", "reason_code": "flow_ready"}
+            if flow["state"] == "implementing":
+                return self._wave_next_action(wave_plan)
+            if flow["state"] == "gate_passed":
+                return {
+                    "tool": "landing_request",
+                    "reason_code": "gates_passed",
+                }
+            return None
         return {
             "draft": {"tool": "spec_submit", "reason_code": "spec_required"},
             "ready": {"tool": "flow_claim", "reason_code": "flow_ready"},
@@ -321,6 +568,67 @@ class Runtime:
             },
             "waiting_owner": None,
         }[flow["state"]]
+
+    def _wave_next_action(self, summary: dict | None) -> dict[str, str] | None:
+        if summary is None or not summary["configured"]:
+            return {"tool": "wave_plan_set", "reason_code": "wave_plan_required"}
+        attention = summary["attention_packages"]
+        if attention:
+            statuses = {package["status"] for package in attention}
+            if "blocked" in statuses:
+                return {"tool": "wave_plan_set", "reason_code": "package_blocked"}
+            if "submitted" in statuses:
+                return {
+                    "tool": "work_package_status",
+                    "reason_code": "package_review_required",
+                }
+            if "changes_requested" in statuses:
+                return {
+                    "tool": "work_package_status",
+                    "reason_code": "package_changes_required",
+                }
+            if "accepted" in statuses:
+                return {
+                    "tool": "work_package_record",
+                    "reason_code": "package_integration_record_required",
+                }
+            return {
+                "tool": "work_package_status",
+                "reason_code": "resume_active_package",
+            }
+        if summary["ready_packages"]:
+            return {
+                "tool": "work_package_status",
+                "reason_code": "execute_current_wave",
+            }
+        if summary["current_wave"] is None:
+            return {"tool": "gate_run", "reason_code": "implementation_complete"}
+        return {"tool": "wave_plan_set", "reason_code": "replan_required"}
+
+    def _package_next_action(self, package: dict) -> dict[str, str] | None:
+        return {
+            "proposed": {"tool": "project_status", "reason_code": "dependency_pending"},
+            "ready": {
+                "tool": "work_package_record",
+                "reason_code": "package_ready",
+            },
+            "running": None,
+            "submitted": {
+                "tool": "work_package_record",
+                "reason_code": "package_review_required",
+            },
+            "changes_requested": {
+                "tool": "work_package_record",
+                "reason_code": "package_changes_required",
+            },
+            "accepted": {
+                "tool": "work_package_record",
+                "reason_code": "package_integration_record_required",
+            },
+            "integrated": None,
+            "blocked": {"tool": "wave_plan_set", "reason_code": "package_blocked"},
+            "deferred": None,
+        }[package["status"]]
 
     def _execute(self, operation: Callable[[], Payload]) -> Payload:
         try:

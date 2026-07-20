@@ -25,7 +25,7 @@ Keep this boundary:
    host's native tool search exactly once for the literal query `project_status`, then invoke the
    returned tool.
    Never inspect or modify `.onlyiflow` directly; all workflow state reads and changes must use
-   the eight MCP tools.
+   the eleven MCP tools.
 4. Use the returned flow ID for every later tool call. If a flow is active, resume it and never call
    `flow_start` for another flow.
 5. On a structured error, report its state and returned next action, then stop instead of guessing.
@@ -33,7 +33,7 @@ Keep this boundary:
 Treat an intermediate `next_action` as transition guidance, not as a stop condition. Unless the
 request is status-only or reaches an explicit owner-turn boundary below, continue the permitted
 tool sequence before reporting. For a managed quick start, call `project_status` and `flow_start`
-in the same turn. For a complete managed standard start, continue through `flow_start`,
+in the same turn. For a complete managed direct standard start, continue through `flow_start`,
 `spec_submit`, and `flow_claim` in the same turn.
 
 After a managed start reaches `implementing`, report the state and stop. Do not inspect or edit
@@ -68,23 +68,53 @@ Choose the lowest justified risk:
 Model uncertainty alone is not deep-risk evidence. Do not add ceremony merely because the agent is
 unsure.
 
+## Wave mode
+
+Wave is an optional `deep` execution mode for one Goal with multiple necessary work packages. One
+Flow is still the only active Flow. `mode=wave` requires `risk=deep`.
+
+An explicit owner request for OnlyiFlow Wave counts as mode confirmation. Otherwise state the
+objective dependency, conflict, or recovery evidence, ask whether to use Wave, and stop. Only after
+the owner explicitly selects or confirms Wave mode, read `references/wave-workflow.md` once.
+
+Start a confirmed Wave with `flow_start(mode="wave", risk="deep")`. While it is `draft`, use
+ordinary host inspection to form the complete Goal, invariants, non-goals, work packages,
+dependencies, Wave reasoning, scopes, acceptance, and authority boundaries. Then present the
+complete Wave plan and stop for a new owner confirmation turn. Do not persist or execute a proposed
+plan.
+
+After plan confirmation, begin with `project_status`, call `spec_submit` for the top-level compact
+spec, call `wave_plan_set` with the complete plan and returned revision, then call `flow_claim`.
+Report `implementing` and stop before host implementation. Later `continue` turns follow the Wave
+reference and the compact `wave_plan` summary. Never call `gate_run` for a Wave until the summary
+reports no current Wave and its next action is `gate_run`.
+
 ## Advance the active flow
 
-- `draft`: for `start` or `continue`, form one compact spec from the user's request and known
+The state rules below apply only to `mode=direct`; they never route a Wave `draft` through the
+direct spec-and-claim sequence or route an incomplete Wave to `gate_run`.
+
+- `draft` in `mode=direct`: for `start` or `continue`, form one compact spec from the user's request and known
   project context. Use normal host inspection only when needed to identify honest expected files.
   If a required field is unknown, ask one compact clarification and stop. Otherwise call
   `spec_submit`, then `flow_claim`.
-- `ready`: for `start` or `continue`, call `flow_claim`.
-- `implementing`: leave exploration, editing, debugging, and test strategy to the host. Do not call
-  `gate_run` unless the user explicitly asks to check or land.
-- `gate_passed`: call `landing_request` only for an explicit `land` request.
-- `waiting_owner`: report that the request is recorded and the owner controls external landing.
+- `ready` in `mode=direct`: for `start` or `continue`, call `flow_claim`.
+- `implementing` in `mode=direct`: leave exploration, editing, debugging, and test strategy to the
+  host.
+- `gate_passed` in `mode=direct`: call `landing_request` only for an explicit `land` request.
+- `waiting_owner` in `mode=direct`: report that the request is recorded and the owner controls
+  external landing.
 
-An explicit `check` is complete owner authorization to call `gate_run`. When `project_status`
-returns an `implementing` flow, call `gate_run` in the same turn. Do not report, stop, ask a
-question, or request confirmation between these calls.
+For confirmed Wave flows, follow the Wave reference on explicit `continue`. Do not call `gate_run`
+unless the user explicitly asks to check or land and all Wave packages are complete.
 
-For `check` or `land` while `implementing`, call `gate_run`. If a required check fails, remain in
+For a direct flow, an explicit `check` is complete owner authorization to call `gate_run`. When
+`project_status` returns an `implementing` direct flow, call `gate_run` in the same turn. Do not
+report, stop, ask a question, or request confirmation between these calls. For a Wave flow, first
+require the compact summary to report implementation complete; otherwise report its package next
+action instead of attempting the final Gate.
+
+For `check` or `land` while a direct flow is `implementing`, call `gate_run`. If a required check fails, remain in
 `implementing`, report the compact evidence, and make fixing the failed checks the one next action.
 If the gate passes for `check`, report `gate_passed` and make an explicit owner land request the one
 next action. If the gate passes for `land`, call `landing_request`.
@@ -97,6 +127,7 @@ merge, push, create a pull request, or prevent direct Git commands.
 Report exactly one current state and one next action, then stop. Keep the report compact. Do not
 echo commands, stdout, stderr, credentials, environment dumps, or external absolute paths.
 
-Never create self-tracking TODOs, invoke another methodology Skill, spawn subagents, require a
-worktree, or add subjective review loops. Do not install dependencies or plugins, edit Agent
-configuration, or prescribe how the host implements the change.
+Outside confirmed Wave mode, never create self-tracking TODOs, invoke another methodology Skill,
+spawn subagents, require a worktree, or add subjective review loops. In confirmed Wave mode the
+host may use its native execution capabilities as described by the reference, but OnlyiFlow never
+performs or controls them. Do not install dependencies or plugins or edit Agent configuration.

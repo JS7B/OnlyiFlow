@@ -20,10 +20,11 @@ for source in (REPOSITORY_ROOT, SOURCE_ROOT):
 
 from onlyiflow.runtime import Runtime  # noqa: E402
 from scripts.run_claude_user_install_lifecycle import (  # noqa: E402
+    EVIDENCE_LABEL,
     MARKETPLACE_NAME,
     PLUGIN_ID,
+    PLUGIN_MANIFEST_VERSION,
     PLUGIN_NAME,
-    RELEASE_VERSION,
     cleanup_lifecycle,
     exact_entry,
     lifecycle_commands,
@@ -200,6 +201,13 @@ def installed_inventory(plugin_root: Path) -> dict:
     return {"skills": len(skills), "mcp_servers": len(servers)}
 
 
+DEFAULT_REPORT = (
+    REPOSITORY_ROOT
+    / "build"
+    / "v0.4.0-wave-candidate-claude-user-install-acceptance.json"
+)
+
+
 def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
     from scripts.run_skill_evaluations import cli_prefix
 
@@ -219,7 +227,8 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
 
     report = {
         "status": "failed",
-        "release_version": RELEASE_VERSION,
+        "evidence_label": EVIDENCE_LABEL,
+        "plugin_manifest_version": PLUGIN_MANIFEST_VERSION,
         "installed_scope": "user",
         "marketplace_source_retained_during_sessions": False,
         "inventory": None,
@@ -248,8 +257,8 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
             timeout_seconds=timeout_seconds,
         )
         plugin = require_plugin(prefix, REPOSITORY_ROOT, timeout_seconds, enabled=True)
-        if plugin.get("version") != RELEASE_VERSION:
-            raise RuntimeError("installed_release_version_invalid")
+        if plugin.get("version") != PLUGIN_MANIFEST_VERSION:
+            raise RuntimeError("installed_plugin_manifest_version_invalid")
         plugin_root = Path(plugin["installPath"]).resolve()
         if not plugin_root.is_relative_to(owned_cache):
             raise RuntimeError("installed_cache_path_invalid")
@@ -494,7 +503,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPOSITORY_ROOT / "build" / "v030-claude-user-install-acceptance.json",
+        default=DEFAULT_REPORT,
     )
     return parser.parse_args()
 
@@ -506,6 +515,8 @@ def main() -> int:
     except Exception as error:  # noqa: BLE001 - preflight evidence.
         report = {
             "status": "failed",
+            "evidence_label": EVIDENCE_LABEL,
+            "plugin_manifest_version": PLUGIN_MANIFEST_VERSION,
             "error_type": type(error).__name__,
             "error_code": str(error).split(":", 1)[0],
         }

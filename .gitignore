@@ -5,3 +5,8 @@ __pycache__/
 *.log
 .onlyiflow/
 build/
+
+# Local development contracts and verification assets
+/AGENTS.md
+/docs/
+/tests/

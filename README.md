@@ -15,8 +15,10 @@ coordinates flow state, deterministic quality Gates, and landing evidence.
 - Configure deterministic project Gates after a separate owner confirmation.
 - Start `quick`, `standard`, or `deep` flows according to the change risk.
 - Record compact specifications and explicit implementation claims.
+- Guide an explicitly confirmed deep goal through versioned Waves and bounded work packages.
 - Run configured quality checks and retain structured Gate evidence.
 - Prepare an owner-facing landing request after all required checks pass.
+- Offer a concise workflow contract as an optional MCP Resource without adding default context.
 - Provide the same workflow semantics across Codex, Claude Code, and ZCode host packages.
 
 ## Release Status
@@ -25,19 +27,21 @@ The current GitHub release is `v0.3.0`. It includes persistent Claude Code `user
 installation, owner-confirmed Gate configuration, project readiness status, and a bounded upgrade
 path for older active flows whose Gate is still empty.
 
+The current source tree is an unpublished `v0.4.0` release candidate. It adds one bounded,
+on-demand MCP workflow-contract Resource plus an optional Wave mode for explicitly confirmed deep
+goals. Wave mode adds three deterministic tools for plan revisions and package evidence, while
+leaving the existing direct quick/standard path unchanged. It adds no MCP Prompt template.
+
 The 0.3.0 release has passed local verification, Claude installed-plugin and release-smoke
 acceptance, and the owner-assisted ZCode lifecycle. The retained local Codex installation resolves
 to 0.3.0 and remains enabled; live Codex 0.3.0 model verification is deferred by the owner.
 
 The established Claude and Codex release baselines have passed the complete activation,
-efficiency/Gate, and release-smoke contracts. The owner-assisted ZCode 0.3.0 lifecycle has passed ordinary-request isolation,
-owner-confirmed initialization, quick-flow execution, failing and passing Gates, landing, and
-unload verification.
-
-The complete acceptance record is available in
-[the v0.3.0 Gate configuration evidence](docs/evaluations/2026-07-19-v0.3.0-gate-configuration.md),
-[the v0.2.0 Claude installation evidence](docs/evaluations/2026-07-18-v0.2.0-claude-user-install.md),
-and [the v0.1.0 release-readiness audit](docs/evaluations/2026-07-17-task7-release-readiness.md).
+efficiency/Gate, and release-smoke contracts. The owner-assisted ZCode 0.3.0 lifecycle has passed
+ordinary-request isolation, owner-confirmed initialization, quick-flow execution, failing and
+passing Gates, landing, and unload verification. The owner-assisted ZCode 3.3.6 Wave acceptance
+for the `v0.4.0` candidate has also passed its proposal, confirmation/claim, resume, unload, and
+cleanup scenarios. Live Claude and Codex Wave acceptance remains pending.
 
 ## Requirements
 
@@ -115,8 +119,56 @@ Start a fresh Claude Code session in the target project, then invoke:
 3. Install `onlyiflow` from the local Marketplace.
 4. Start a new task in the target project and explicitly invoke the OnlyiFlow Skill.
 
-The complete install, update, removal, and verification procedures are in the
-[release guide](docs/release-guide.md).
+## Update An Existing Installation
+
+Download or check out the intended newer release, build it into a fresh empty output root, and
+validate the generated packages before replacing any retained Marketplace directory:
+
+```powershell
+python -B scripts\build_loader_candidates.py --output-root "<fresh-output-root>"
+```
+
+Close the host being updated. Replace only that host's retained Marketplace directory with the
+corresponding validated directory from `<fresh-output-root>`, then use its native update path.
+
+### Update Codex
+
+Keep the existing `onlyiflow-dev` Marketplace registration and refresh the installed cache from
+the newly built Marketplace:
+
+```powershell
+<codex> plugin add onlyiflow@onlyiflow-dev --json
+```
+
+A version change such as `0.4.0` to a later release is reflected by the rebuilt manifest. Start a new Codex
+task after the command succeeds.
+
+### Update Claude Code
+
+Keep the retained `onlyiflow-local` directory and its user-scope Marketplace registration. After
+replacing that directory with the new build, run:
+
+```powershell
+claude plugin marketplace update onlyiflow-local
+claude plugin update onlyiflow@onlyiflow-local --scope user
+```
+
+Start a fresh Claude Code session after both commands succeed.
+
+### Update ZCode
+
+Use ZCode Desktop as the installation surface:
+
+1. Remove the installed OnlyiFlow plugin from **Installed**.
+2. Replace or refresh the retained local Marketplace with the new `zcode/` build.
+3. Install OnlyiFlow again from **Discover**.
+4. Start a new task and confirm the Skill and MCP server are visible.
+
+Updating the host package does not recreate project-local `.onlyiflow/` state. Synchronize the
+selected Python environment with the new `requirements.txt` when its dependency list changes, and
+leave unrelated plugins and Marketplaces unchanged.
+
+The commands above cover the supported install, update, and removal paths for each host.
 
 ## Run A Workflow
 
@@ -125,6 +177,7 @@ Invoke OnlyiFlow together with the intended action. For example:
 ```text
 $onlyiflow:onlyiflow start a quick flow for the cache-key bug
 /onlyiflow:onlyiflow start a standard flow for the authentication change
+$onlyiflow:onlyiflow start a deep Wave flow for this migration goal
 ```
 
 On first use in a project:
@@ -141,6 +194,15 @@ On first use in a project:
 `quick` flows enter implementation directly. `standard` flows use one compact specification.
 `deep` flows add an owner-confirmation turn before detailed planning.
 
+For a deep goal that explicitly requests Wave mode, the host presents one complete package plan
+and waits for a separate confirmation. OnlyiFlow then records the versioned plan and exposes only
+the package needed for the current Wave. The host decides whether and how to use native agents,
+worktrees, reviews, and Git; after those host actions occur, OnlyiFlow records compact package
+handoffs and integration evidence. Dependencies unlock only after their packages are recorded as
+integrated, and the final project Gate remains unavailable until every package is integrated or a
+conditional package is explicitly deferred. Material replanning requires another complete plan
+and owner confirmation.
+
 If an upgraded project already has an active flow but its Gate is still empty, OnlyiFlow uses the
 same proposal and separate owner-confirmation boundary for the first Gate, then resumes that flow.
 Configured Gates remain locked while a flow is active.
@@ -156,7 +218,7 @@ Managed projects store state under:
   specs/
 ```
 
-The Skill coordinates these eight deterministic MCP tools:
+The current development Skill coordinates these eleven deterministic MCP tools:
 
 ```text
 project_status
@@ -164,7 +226,10 @@ project_init
 gate_configure
 flow_start
 spec_submit
+wave_plan_set
 flow_claim
+work_package_status
+work_package_record
 gate_run
 landing_request
 ```
@@ -172,28 +237,13 @@ landing_request
 Every tool resolves an explicit project root and returns a stable structured result with at most
 one next action.
 
-## Repository Layers
-
-Product contracts:
-
-- `docs/product-spec.md`: behavior, flow semantics, and product scope
-- `docs/engineering-spec.md`: runtime, persistence, transport, packaging, and testing contracts
-- `docs/release-guide.md`: installation, lifecycle, verification, and release procedure
-
-Implementation:
+## Repository Layout
 
 - `src/onlyiflow/`: domain, storage, Gate, and workflow runtime
 - `server/stdio.py`: plugin-local stdio server bootstrap
 - `packaging/`: host manifests and Skill resources
 - `scripts/build_loader_candidates.py`: host-package builder
-
-Verification and evidence:
-
-- `tests/`: unit, contract, packaging, and runner tests
-- `scripts/run_skill_evaluations.py`, `scripts/run_efficiency_measurements.py`, and
-  `scripts/run_release_smoke.py`: release-evidence runners
-- `docs/research/`, `docs/plans/`, and `docs/evaluations/`: research, execution plans, and accepted
-  evidence
+- `requirements.txt`: runtime dependency contract
 
 ## Core Product Rule
 
