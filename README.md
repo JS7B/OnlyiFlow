@@ -23,25 +23,22 @@ coordinates flow state, deterministic quality Gates, and landing evidence.
 
 ## Release Status
 
-The current GitHub release is `v0.3.0`. It includes persistent Claude Code `user`-scope
-installation, owner-confirmed Gate configuration, project readiness status, and a bounded upgrade
-path for older active flows whose Gate is still empty.
+The current GitHub release is `v0.4.0`. It adds one bounded, on-demand MCP workflow-contract
+Resource plus an optional Wave mode for explicitly confirmed deep goals. Wave mode adds three
+deterministic tools for plan revisions and package evidence, while leaving the existing direct
+quick/standard path unchanged. It adds no MCP Prompt template.
 
-The current source tree is an unpublished `v0.4.0` release candidate. It adds one bounded,
-on-demand MCP workflow-contract Resource plus an optional Wave mode for explicitly confirmed deep
-goals. Wave mode adds three deterministic tools for plan revisions and package evidence, while
-leaving the existing direct quick/standard path unchanged. It adds no MCP Prompt template.
-
-The 0.3.0 release has passed local verification, Claude installed-plugin and release-smoke
-acceptance, and the owner-assisted ZCode lifecycle. The retained local Codex installation resolves
-to 0.3.0 and remains enabled; live Codex 0.3.0 model verification is deferred by the owner.
+Version 0.3.0 established persistent Claude Code `user`-scope installation, owner-confirmed Gate
+configuration, project readiness status, and a bounded upgrade path for older active flows whose
+Gate is still empty. Its local, Claude, and owner-assisted ZCode acceptance remains the direct-flow
+baseline for 0.4.0.
 
 The established Claude and Codex release baselines have passed the complete activation,
 efficiency/Gate, and release-smoke contracts. The owner-assisted ZCode 0.3.0 lifecycle has passed
 ordinary-request isolation, owner-confirmed initialization, quick-flow execution, failing and
 passing Gates, landing, and unload verification. The owner-assisted ZCode 3.3.6 Wave acceptance
-for the `v0.4.0` candidate has also passed its proposal, confirmation/claim, resume, unload, and
-cleanup scenarios. Live Claude and Codex Wave acceptance remains pending.
+for `v0.4.0` has also passed its proposal, confirmation/claim, resume, unload, and cleanup
+scenarios. Live Claude and Codex Wave acceptance remains pending.
 
 ## Requirements
 
