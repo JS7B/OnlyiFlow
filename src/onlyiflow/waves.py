@@ -1,3 +1,5 @@
+"""Validate versioned Wave plans, work-package contracts, and compact handoffs."""
+
 from __future__ import annotations
 
 import re
@@ -250,6 +252,7 @@ def normalize_record(
         "reason_code": reason_code,
         "retryable": retryable,
     }
+    # Each action has a closed evidence shape; unrelated fields are rejected.
     required: dict[str, set[str]] = {
         "start": set(),
         "submit": {
@@ -311,6 +314,7 @@ def normalize_record(
 
 
 def changed_files_in_scope(changed_files: list[str], package: dict) -> bool:
+    # These are host-declared paths, checked only against the confirmed package contract.
     return all(
         any(path_in_scope(path, scope) for scope in package["allowed_paths"])
         and not any(path_in_scope(path, scope) for scope in package["forbidden_paths"])
@@ -494,6 +498,7 @@ def ensure_acyclic(packages: list[dict]) -> None:
 
 
 def scopes_overlap(left: str, right: str) -> bool:
+    # A trailing slash denotes a directory scope; other values denote exact files.
     left_dir = left.endswith("/")
     right_dir = right.endswith("/")
     left_value = left[:-1] if left_dir else left

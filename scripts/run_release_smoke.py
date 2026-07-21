@@ -1,3 +1,5 @@
+"""Run end-to-end release smoke scenarios against an installed host package."""
+
 from __future__ import annotations
 
 import argparse
@@ -144,6 +146,7 @@ def run_loaded_smoke(
         raise ReleaseSmokeFailure("git_project_contract_failed")
     initial_database = database_evidence(project)
     initial_source = source_snapshot(project)
+    # Ordinary coding turns must leave both workflow state and source untouched.
     ordinary = run_turn(
         host=host,
         project=project,
@@ -460,6 +463,7 @@ def run_post_unload(
     )
     before_database = database_evidence(project)
     before_source = source_snapshot(project)
+    # Disabled/unloaded execution must not retain an implicit OnlyiFlow surface.
     turn = run_turn(
         host=host,
         project=project,
@@ -585,6 +589,7 @@ def main() -> int:
         except RuntimeError:
             error = "plugin_lifecycle_failed"
         finally:
+            # Release evidence is invalid unless the runner-owned lifecycle is removed.
             if lifecycle is not None:
                 raw_cleanup = lifecycle.cleanup()
                 if raw_cleanup:

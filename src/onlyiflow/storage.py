@@ -1,3 +1,5 @@
+"""Persist workflow state, migrations, and compact evidence in project-local SQLite."""
+
 from __future__ import annotations
 
 import json
@@ -178,6 +180,7 @@ class ProjectStore:
     def transaction(self, *, immediate: bool = False) -> Iterator[sqlite3.Connection]:
         connection = self.connect()
         try:
+            # Immediate transactions serialize competing workflow-state mutations.
             connection.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
             yield connection
             connection.commit()
@@ -681,6 +684,7 @@ class ProjectStore:
             if row is None:
                 raise self.package_not_found()
 
+            # Records attest to completed host work; this layer never executes that work.
             action = record["action"]
             current = row["status"]
             target = current
@@ -1023,6 +1027,7 @@ class ProjectStore:
         ).fetchone()
         if row is None:
             return False
+        # Readiness requires both prior Waves and explicit dependencies to be complete.
         lower_incomplete = connection.execute(
             """
             SELECT 1 FROM work_packages

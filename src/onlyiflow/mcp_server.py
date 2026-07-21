@@ -1,3 +1,5 @@
+"""Expose the transport-independent OnlyiFlow runtime through FastMCP."""
+
 from __future__ import annotations
 
 import json
@@ -1066,6 +1068,7 @@ def landing_request(project_root: ProjectRoot, flow_id: FlowId) -> ToolResult:
 
 
 def tool_result(payload: dict) -> ToolResult:
+    # Structured content is authoritative; text preserves compatibility with older hosts.
     text = json.dumps(
         payload,
         ensure_ascii=False,

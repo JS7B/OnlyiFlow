@@ -1,3 +1,5 @@
+"""Run model-backed acceptance against a Claude user-scope OnlyiFlow installation."""
+
 from __future__ import annotations
 
 import argparse
@@ -446,6 +448,7 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
         report["error_type"] = type(error).__name__
         report["error_code"] = str(error).split(":", 1)[0]
     finally:
+        # Acceptance must restore the exact pre-run plugin lifecycle even after failure.
         if commands is not None:
             report["cleanup_errors"] = cleanup_lifecycle(
                 prefix,

@@ -1,3 +1,5 @@
+"""Evaluate explicit Skill activation and workflow behavior across supported hosts."""
+
 from __future__ import annotations
 
 import argparse
@@ -307,6 +309,7 @@ def run_process(
             duration_seconds=round(time.perf_counter() - started, 3),
         )
     except subprocess.TimeoutExpired:
+        # Kill the whole host process tree so timed-out MCP children cannot survive.
         terminate_process_tree(process.pid)
         stdout, stderr = process.communicate()
         return ProcessResult(
@@ -842,6 +845,7 @@ class CodexLifecycle:
 
     def cleanup(self) -> list[str]:
         errors = []
+        # Unregister the plugin before its marketplace, then verify cache absence.
         if self.plugin_added:
             try:
                 self.run(

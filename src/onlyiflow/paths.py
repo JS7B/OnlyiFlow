@@ -1,3 +1,5 @@
+"""Resolve project roots and validate project-relative workflow paths."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -83,6 +85,7 @@ def normalize_expected_files(expected_files: list[str]) -> list[str]:
             raise expected_files_error()
 
         candidate = value.strip().replace("\\", "/")
+        # Validate both path dialects so hostile input is rejected on every host OS.
         posix = PurePosixPath(candidate)
         windows = PureWindowsPath(candidate)
         if (

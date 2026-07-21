@@ -1,3 +1,5 @@
+"""Exercise Claude user-scope installation, upgrade, and cleanup as one lifecycle."""
+
 from __future__ import annotations
 
 import argparse
@@ -336,6 +338,7 @@ def cleanup_lifecycle(
     marketplace_install_root: Path,
 ) -> list[str]:
     errors: list[str] = []
+    # Remove registered state before deleting runner-owned cache directories.
     try:
         if exact_entry(list_plugins(prefix, cwd, timeout_seconds), "id", PLUGIN_ID):
             run_required(
@@ -472,6 +475,7 @@ def run_lifecycle(marketplace_source: Path, timeout_seconds: int) -> dict:
                 raise RuntimeError("marketplace_cache_path_invalid")
             second_project = temporary_root / "second project 中文"
             second_project.mkdir()
+            # Hiding the source proves the installed cache is independently runnable.
             with hidden_directories([observed_marketplace_root]):
                 asyncio.run(
                     prove_cached_runtime(

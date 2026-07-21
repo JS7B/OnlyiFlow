@@ -1,3 +1,5 @@
+"""Validate, persist, and execute deterministic project Gate checks."""
+
 from __future__ import annotations
 
 import json
@@ -63,6 +65,7 @@ def configure_gate_checks(config_path: Path, raw_checks: list[dict]) -> list[Gat
     content = serialize_gate_configuration(checks)
     temporary_path: Path | None = None
     try:
+        # Keep the temporary file beside the target so os.replace remains atomic.
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -172,6 +175,7 @@ def run_gate_check(check: GateCheck, project_root: Path) -> dict:
     started = time.perf_counter()
     exit_code: int | None = None
     try:
+        # Gate evidence records only compact metadata, never command output.
         completed = subprocess.run(
             check.command,
             cwd=project_root,

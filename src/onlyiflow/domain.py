@@ -1,3 +1,5 @@
+"""Define flow identifiers, risk validation, and core domain value checks."""
+
 from __future__ import annotations
 
 import re

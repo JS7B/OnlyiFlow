@@ -3,42 +3,34 @@
 [简体中文](README.zh-CN.md) | English
 
 OnlyiFlow is a project-local development workflow plugin for Codex, Claude Code, and ZCode. It
-provides an explicitly invoked Skill, a deterministic local stdio MCP server, and SQLite-backed
+combines an explicitly invoked Skill, a deterministic local stdio MCP server, and SQLite-backed
 workflow state.
 
-The host coding agent performs planning, implementation, debugging, and testing. OnlyiFlow
-coordinates flow state, deterministic quality Gates, and landing evidence.
+The host coding agent owns planning, implementation, debugging, and testing. OnlyiFlow coordinates
+explicit flow state, deterministic quality Gates, bounded Wave plans, and landing evidence.
 
 ## Capabilities
 
 - Initialize project-local workflow state after owner confirmation.
 - Configure deterministic project Gates after a separate owner confirmation.
-- Start `quick`, `standard`, or `deep` flows according to the change risk.
+- Start `quick`, `standard`, or `deep` flows according to change risk.
 - Record compact specifications and explicit implementation claims.
-- Guide an explicitly confirmed deep goal through versioned Waves and bounded work packages.
+- Guide confirmed deep goals through versioned Waves and bounded work packages.
 - Run configured quality checks and retain structured Gate evidence.
 - Prepare an owner-facing landing request after all required checks pass.
-- Offer a concise workflow contract as an optional MCP Resource without adding default context.
-- Provide the same workflow semantics across Codex, Claude Code, and ZCode host packages.
+- Expose a concise workflow contract as an optional MCP Resource.
+- Provide consistent workflow semantics across Codex, Claude Code, and ZCode packages.
 
-## Release Status
+## Releases
 
-The current GitHub release is `v0.4.0`. It adds one bounded, on-demand MCP workflow-contract
-Resource plus an optional Wave mode for explicitly confirmed deep goals. Wave mode adds three
-deterministic tools for plan revisions and package evidence, while leaving the existing direct
-quick/standard path unchanged. It adds no MCP Prompt template.
-
-Version 0.3.0 established persistent Claude Code `user`-scope installation, owner-confirmed Gate
-configuration, project readiness status, and a bounded upgrade path for older active flows whose
-Gate is still empty. Its local, Claude, and owner-assisted ZCode acceptance remains the direct-flow
-baseline for 0.4.0.
-
-The established Claude and Codex release baselines have passed the complete activation,
-efficiency/Gate, and release-smoke contracts. The owner-assisted ZCode 0.3.0 lifecycle has passed
-ordinary-request isolation, owner-confirmed initialization, quick-flow execution, failing and
-passing Gates, landing, and unload verification. The owner-assisted ZCode 3.3.6 Wave acceptance
-for `v0.4.0` has also passed its proposal, confirmation/claim, resume, unload, and cleanup
-scenarios. Live Claude and Codex Wave acceptance remains pending.
+- `v0.1.0` — Established the explicitly invoked Skill, project-local SQLite state, deterministic
+  MCP workflow, `quick`/`standard`/`deep` risk levels, quality Gates, and landing handoff.
+- `v0.2.0` — Added persistent Claude Code `user`-scope installation through a retained local
+  Marketplace and a user-selected Python environment.
+- `v0.3.0` — Added owner-confirmed Gate configuration, project readiness reporting, and a bounded
+  migration path for older active flows with an empty Gate.
+- `v0.4.0` — Added the optional deep-only Wave workflow, versioned work-package plans, three Wave
+  tools, and the bounded `onlyiflow://contract/concise` MCP Resource. This is the current release.
 
 ## Requirements
 
@@ -71,7 +63,7 @@ build/loader-candidates/claude-marketplace/
 build/loader-candidates/zcode/
 ```
 
-Use an empty output directory for each fresh build. The generated directory for each host is
+Use an empty output directory for each fresh build. Every generated host package is
 self-contained.
 
 ## Install And Start
@@ -111,102 +103,87 @@ Start a fresh Claude Code session in the target project, then invoke:
 
 ### ZCode
 
-1. Open **Plugin Management** and select **Add Marketplace**.
+1. Open **Plugin Management** and choose **Add Marketplace**.
 2. Select `build/loader-candidates/zcode/`.
 3. Install `onlyiflow` from the local Marketplace.
-4. Start a new task in the target project and explicitly invoke the OnlyiFlow Skill.
+4. Start a new task in the target project and select the OnlyiFlow Skill in the composer.
 
-## Update An Existing Installation
+## Uninstall
 
-Download or check out the intended newer release, build it into a fresh empty output root, and
-validate the generated packages before replacing any retained Marketplace directory:
+Close active host sessions before changing plugin state. Removing the host plugin does not remove
+project-local `.onlyiflow/` workflow state.
 
-```powershell
-python -B scripts\build_loader_candidates.py --output-root "<fresh-output-root>"
-```
-
-Close the host being updated. Replace only that host's retained Marketplace directory with the
-corresponding validated directory from `<fresh-output-root>`, then use its native update path.
-
-### Update Codex
-
-Keep the existing `onlyiflow-dev` Marketplace registration and refresh the installed cache from
-the newly built Marketplace:
+### Codex
 
 ```powershell
-<codex> plugin add onlyiflow@onlyiflow-dev --json
+<codex> plugin remove onlyiflow@onlyiflow-dev --json
+<codex> plugin marketplace remove onlyiflow-dev
 ```
 
-A version change such as `0.4.0` to a later release is reflected by the rebuilt manifest. Start a new Codex
-task after the command succeeds.
+Start a new Codex task after removal.
 
-### Update Claude Code
-
-Keep the retained `onlyiflow-local` directory and its user-scope Marketplace registration. After
-replacing that directory with the new build, run:
+### Claude Code
 
 ```powershell
-claude plugin marketplace update onlyiflow-local
-claude plugin update onlyiflow@onlyiflow-local --scope user
+claude plugin uninstall onlyiflow@onlyiflow-local --scope user --yes
+claude plugin marketplace remove onlyiflow-local --scope user
 ```
 
-Start a fresh Claude Code session after both commands succeed.
+After both commands succeed, the retained local Marketplace directory may be removed. Start a new
+Claude Code session to refresh the available Skill and MCP inventory.
 
-### Update ZCode
+### ZCode
 
-Use ZCode Desktop as the installation surface:
-
-1. Remove the installed OnlyiFlow plugin from **Installed**.
-2. Replace or refresh the retained local Marketplace with the new `zcode/` build.
-3. Install OnlyiFlow again from **Discover**.
-4. Start a new task and confirm the Skill and MCP server are visible.
-
-Updating the host package does not recreate project-local `.onlyiflow/` state. Synchronize the
-selected Python environment with the new `requirements.txt` when its dependency list changes, and
-leave unrelated plugins and Marketplaces unchanged.
-
-The commands above cover the supported install, update, and removal paths for each host.
+1. Open **Plugin Management** and switch to **Installed**.
+2. Remove `onlyiflow`.
+3. Confirm that its Skill and MCP server are no longer loaded.
+4. Remove the local Marketplace source from **Discover** only when it is no longer needed.
 
 ## Run A Workflow
 
-Invoke OnlyiFlow together with the intended action. For example:
+Only explicit OnlyiFlow requests activate the workflow. Combine the host-specific invocation with
+one concrete instruction.
+
+| Host        | Invocation                                              |
+| ----------- | ------------------------------------------------------- |
+| Codex       | `$onlyiflow:onlyiflow <instruction>`                  |
+| Claude Code | `/onlyiflow:onlyiflow <instruction>`                  |
+| ZCode       | Select the OnlyiFlow Skill, then enter`<instruction>` |
+
+### Common Instructions
+
+| Intent             | Example instruction                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| Initialize         | `initialize this project for OnlyiFlow and stop at each owner-confirmation boundary` |
+| Quick change       | `start a quick flow for the cache-key bug`                                           |
+| Standard change    | `start a standard flow for the authentication change`                                |
+| Deep direct change | `start a deep direct flow for the storage migration`                                 |
+| Deep Wave change   | `start a deep Wave flow for the storage migration`                                   |
+| Resume             | `resume the active OnlyiFlow flow and report one next action`                        |
+| Check              | `check the active flow with its configured Gate`                                     |
+| Land               | `land the Gate-passed flow and record the owner handoff`                             |
+
+For example, a complete Codex Wave invocation is:
 
 ```text
-$onlyiflow:onlyiflow start a quick flow for the cache-key bug
-/onlyiflow:onlyiflow start a standard flow for the authentication change
 $onlyiflow:onlyiflow start a deep Wave flow for this migration goal
 ```
 
-On first use in a project:
+### First Use In A Project
 
-1. OnlyiFlow reports the project status.
-2. The host presents the project-local state entries for owner confirmation.
-3. After confirmation, OnlyiFlow initializes the project.
-4. The host proposes the Gate checks and waits for a separate owner confirmation.
-5. OnlyiFlow stores the confirmed Gate configuration, then starts the requested flow.
-6. The host agent implements and tests the change while OnlyiFlow records the flow state.
-7. An explicit `check` request runs the configured Gate.
-8. An explicit `land` request records the landing handoff after the Gate passes.
+The first explicit request establishes two owner-confirmed boundaries:
 
-`quick` flows enter implementation directly. `standard` flows use one compact specification.
-`deep` flows add an owner-confirmation turn before detailed planning.
+```text
+project_status
+  -> owner confirms project initialization
+project_init
+  -> host presents the complete Gate proposal
+  -> owner confirms the Gate configuration
+gate_configure
+  -> project ready
+```
 
-For a deep goal that explicitly requests Wave mode, the host presents one complete package plan
-and waits for a separate confirmation. OnlyiFlow then records the versioned plan and exposes only
-the package needed for the current Wave. The host decides whether and how to use native agents,
-worktrees, reviews, and Git; after those host actions occur, OnlyiFlow records compact package
-handoffs and integration evidence. Dependencies unlock only after their packages are recorded as
-integrated, and the final project Gate remains unavailable until every package is integrated or a
-conditional package is explicitly deferred. Material replanning requires another complete plan
-and owner confirmation.
-
-If an upgraded project already has an active flow but its Gate is still empty, OnlyiFlow uses the
-same proposal and separate owner-confirmation boundary for the first Gate, then resumes that flow.
-Configured Gates remain locked while a flow is active.
-
-## State And Tool Model
-
-Managed projects store state under:
+`project_status` is read-only. `project_init` creates exactly:
 
 ```text
 <project>/.onlyiflow/
@@ -215,28 +192,113 @@ Managed projects store state under:
   specs/
 ```
 
-The current development Skill coordinates these eleven deterministic MCP tools:
+The host presents every Gate check, command, required flag, and timeout before the separate
+confirmation that authorizes `gate_configure`.
+
+### Direct Flows
+
+| Risk         | Use                                             | Route to implementation                                       |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------- |
+| `quick`    | Small, well-understood changes                  | `project_status -> flow_start`                              |
+| `standard` | Changes needing one compact specification       | `project_status -> flow_start -> spec_submit -> flow_claim` |
+| `deep`     | High-risk work needing owner-confirmed planning | `project_status -> flow_start -> spec_submit -> flow_claim` |
+
+A configured `quick` flow enters `implementing` atomically. `standard` and direct `deep` flows
+start in `draft`, store one compact specification, and enter implementation through `flow_claim`.
+Deep planning adds an owner-confirmation boundary before persistence.
+
+### Wave Flows
+
+Wave mode is optional and available only for `deep` goals. Request it explicitly when the work
+benefits from a versioned dependency plan and bounded work packages.
+
+The start and confirmation turns are separate:
 
 ```text
-project_status
-project_init
-gate_configure
-flow_start
-spec_submit
-wave_plan_set
-flow_claim
-work_package_status
-work_package_record
-gate_run
-landing_request
+Start turn:
+project_status -> flow_start(mode="wave")
+  -> host presents the complete Wave and work-package plan
+  -> stop for owner confirmation
+
+Confirmation turn:
+project_status -> spec_submit -> wave_plan_set -> flow_claim
+  -> state: implementing
 ```
 
-Every tool resolves an explicit project root and returns a stable structured result with at most
-one next action.
+The complete plan defines the goal, invariants, non-goals, package dependencies, Wave numbers,
+allowed and forbidden paths, deliverables, acceptance conditions, authorization requirements, and
+conflict reasoning. Plan confirmation does not authorize dependency installation, external writes,
+Git operations, or publication unless the owner grants them separately.
+
+The host decides whether and how to use native agents, worktrees, reviews, and Git while executing
+the confirmed plan.
+
+During implementation:
+
+1. `project_status` reports the current Wave and one next action.
+2. `work_package_status` returns one target package contract.
+3. The host performs the implementation, review, testing, worktree, or agent actions it chooses.
+4. `work_package_record` records the completed host action.
+5. Integrated dependencies unlock packages in later Waves.
+6. Material replanning requires another complete `wave_plan_set` revision and owner confirmation.
+7. The final Gate remains unavailable until every package is `integrated` or a conditional package
+   is validly `deferred`.
+
+`work_package_record` supports these closed actions:
+
+```text
+start
+submit
+request_changes
+accept
+integrate
+interrupt
+block
+resume
+defer
+```
+
+These actions record host work; they do not execute an agent, worktree, review, command, or Git
+operation.
+
+### Check And Land
+
+An explicit check instruction invokes `gate_run`. Required failures keep the flow in
+`implementing`; a passing Gate moves it to `gate_passed`.
+
+An explicit land instruction after a passing Gate invokes `landing_request` and records
+`waiting_owner`. Commit, merge, push, and release remain owner-controlled host actions.
+
+## MCP Surface
+
+OnlyiFlow v0.4.0 exposes eleven deterministic MCP tools:
+
+| Tool                    | Responsibility                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `project_status`      | Read project readiness, the active flow, current Gate state, and one next action. |
+| `project_init`        | Create project-local workflow state after owner confirmation.                     |
+| `gate_configure`      | Atomically store the complete owner-confirmed Gate configuration.                 |
+| `flow_start`          | Start a`quick`, `standard`, or `deep` direct/Wave flow.                     |
+| `spec_submit`         | Store one compact specification for a standard or deep flow.                      |
+| `wave_plan_set`       | Store a complete initial Wave plan or confirmed plan revision.                    |
+| `flow_claim`          | Move a ready standard or deep flow into implementation.                           |
+| `work_package_status` | Read one bounded package contract and its current state.                          |
+| `work_package_record` | Record one completed host-owned package transition.                               |
+| `gate_run`            | Run configured checks and store compact Gate evidence.                            |
+| `landing_request`     | Record the owner-controlled landing handoff after a passed Gate.                  |
+
+It also exposes one optional static Resource:
+
+```text
+onlyiflow://contract/concise
+```
+
+The Resource summarizes the workflow contract without carrying project state. Dynamic state always
+comes from `project_status`. OnlyiFlow exposes no MCP Prompt templates.
 
 ## Repository Layout
 
-- `src/onlyiflow/`: domain, storage, Gate, and workflow runtime
+- `src/onlyiflow/`: domain, storage, Gate, Wave, and workflow runtime
 - `server/stdio.py`: plugin-local stdio server bootstrap
 - `packaging/`: host manifests and Skill resources
 - `scripts/build_loader_candidates.py`: host-package builder

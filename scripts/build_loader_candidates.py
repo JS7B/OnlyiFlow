@@ -1,3 +1,5 @@
+"""Build isolated, self-contained plugin candidates for each supported host."""
+
 from __future__ import annotations
 
 import argparse
@@ -32,6 +34,7 @@ def build_candidates(output_root: Path) -> dict[str, Path]:
         "zcode": output_root / "zcode" / "onlyiflow",
     }
     for host, destination in roots.items():
+        # Each candidate receives the shared runtime plus only its host-specific shell.
         destination.mkdir(parents=True)
         for directory in COMMON_DIRECTORIES:
             shutil.copytree(

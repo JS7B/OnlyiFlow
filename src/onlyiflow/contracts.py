@@ -1,3 +1,5 @@
+"""Define stable success, failure, and domain-error payload contracts."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
