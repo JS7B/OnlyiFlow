@@ -1,4 +1,4 @@
-"""Build isolated, self-contained plugin candidates for each supported host."""
+"""为各受支持宿主构建相互隔离且自包含的插件候选包。"""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def build_candidates(output_root: Path) -> dict[str, Path]:
         "zcode": output_root / "zcode" / "onlyiflow",
     }
     for host, destination in roots.items():
-        # Each candidate receives the shared runtime plus only its host-specific shell.
+        # 每个候选包包含共享运行时，并仅叠加对应宿主的包装层。
         destination.mkdir(parents=True)
         for directory in COMMON_DIRECTORIES:
             shutil.copytree(

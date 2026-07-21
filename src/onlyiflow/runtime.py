@@ -1,4 +1,4 @@
-"""Coordinate project, flow, Wave, Gate, and landing operations."""
+"""协调项目、Flow、Wave、Gate 与落地操作。"""
 
 from __future__ import annotations
 
@@ -153,7 +153,7 @@ class Runtime:
                 },
             )
 
-        # Status is read-only and must leave legacy schema-version 1 projects untouched.
+        # 状态查询为只读操作，不得改动旧版 schema-version 1 项目。
         store = ProjectStore(paths)
         active_flow = store.active_flow()
         gate_config = gate_config_summary(store.paths.config)
@@ -191,7 +191,7 @@ class Runtime:
         store = self._managed_store(project_root)
         active_flow = store.active_flow()
         gate_config = gate_config_summary(store.paths.config)
-        # An empty legacy Gate may be configured once; active configured Gates are frozen.
+        # 旧版空 Gate 可配置一次；活动流程中已配置的 Gate 保持冻结。
         if active_flow is not None and gate_config["configured"]:
             raise DomainError(
                 code="gate_config_locked",
@@ -400,7 +400,7 @@ class Runtime:
         flow_id: str,
         package_id: str,
     ) -> Payload:
-        # Package inspection is a read path and therefore cannot trigger schema migration.
+        # 工作包查询属于只读路径，因此不得触发数据库模式迁移。
         store = self._managed_store(project_root, migrate=False)
         normalized_flow_id = validate_flow_id(flow_id)
         package = store.work_package(
@@ -460,7 +460,7 @@ class Runtime:
         store = self._managed_store(project_root)
         normalized_flow_id = validate_flow_id(flow_id)
         flow = store.require_gate_runnable(normalized_flow_id)
-        # A project-level Gate cannot replace incomplete package-level handoffs.
+        # 项目级 Gate 不能替代尚未完成的工作包交接。
         if flow["mode"] == "wave" and not store.wave_plan_complete(normalized_flow_id):
             raise DomainError(
                 code="wave_packages_incomplete",
@@ -526,7 +526,7 @@ class Runtime:
                 },
             )
         store = ProjectStore(paths)
-        # Mutations migrate additively; callers may opt out for strictly read-only access.
+        # 写操作执行增量迁移；严格只读调用方可以明确禁用迁移。
         if migrate:
             store.ensure_schema()
         return store
@@ -642,7 +642,7 @@ class Runtime:
             return operation()
         except DomainError as error:
             return failure(error)
-        # Do not expose host paths or database details across the MCP boundary.
+        # 不跨越 MCP 边界暴露宿主路径或数据库细节。
         except (OSError, sqlite3.Error):
             return failure(
                 DomainError(

@@ -1,4 +1,4 @@
-"""Measure bounded workflow efficiency and Gate value across supported hosts."""
+"""测量各受支持宿主中有界工作流的效率与 Gate 价值。"""
 
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ class MeasurementInfrastructureFailure(MeasurementFailure):
 
 def source_snapshot(project: Path) -> dict[str, str]:
     snapshot: dict[str, str] = {}
-    # Workflow state is excluded so source edits can be measured independently.
+    # 排除工作流状态，以便独立测量源文件改动。
     for path in sorted(project.rglob("*"), key=lambda item: item.as_posix()):
         if not path.is_file():
             continue
@@ -440,7 +440,7 @@ def gate_evidence_is_private(project: Path) -> bool:
     if not result["ok"]:
         return False
 
-    # Recursively reject command-like fields and leaked fixture paths.
+    # 递归拒绝命令类字段和泄露的夹具路径。
     def visit(value: object) -> bool:
         if isinstance(value, dict):
             if any(str(key).casefold() in PRIVATE_GATE_KEYS for key in value):
@@ -779,7 +779,7 @@ def main() -> int:
         error = caught
         print(f"measurement_error={caught}", file=sys.stderr)
     finally:
-        # The temporary Codex lifecycle is runner-owned regardless of outcome.
+        # 无论测量结果如何，临时 Codex 生命周期均由运行器负责清理。
         if lifecycle is not None:
             raw_cleanup = lifecycle.cleanup()
             if raw_cleanup:

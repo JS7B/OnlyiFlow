@@ -1,4 +1,4 @@
-"""Define flow identifiers, risk validation, and core domain value checks."""
+"""定义 Flow 标识符、风险校验与核心领域值检查。"""
 
 from __future__ import annotations
 

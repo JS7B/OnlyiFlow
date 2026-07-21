@@ -1,4 +1,4 @@
-"""Expose the transport-independent OnlyiFlow runtime through FastMCP."""
+"""通过 FastMCP 暴露与传输方式无关的 OnlyiFlow 运行时。"""
 
 from __future__ import annotations
 
@@ -1068,7 +1068,7 @@ def landing_request(project_root: ProjectRoot, flow_id: FlowId) -> ToolResult:
 
 
 def tool_result(payload: dict) -> ToolResult:
-    # Structured content is authoritative; text preserves compatibility with older hosts.
+    # 结构化内容是权威结果；文本回退用于兼容旧版宿主。
     text = json.dumps(
         payload,
         ensure_ascii=False,

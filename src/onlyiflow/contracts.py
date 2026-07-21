@@ -1,4 +1,4 @@
-"""Define stable success, failure, and domain-error payload contracts."""
+"""定义稳定的成功、失败与领域错误载荷契约。"""
 
 from __future__ import annotations
 

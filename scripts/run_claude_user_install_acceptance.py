@@ -1,4 +1,4 @@
-"""Run model-backed acceptance against a Claude user-scope OnlyiFlow installation."""
+"""针对 Claude 用户级 OnlyiFlow 安装运行模型驱动的验收。"""
 
 from __future__ import annotations
 
@@ -448,7 +448,7 @@ def run_acceptance(marketplace_source: Path, timeout_seconds: int) -> dict:
         report["error_type"] = type(error).__name__
         report["error_code"] = str(error).split(":", 1)[0]
     finally:
-        # Acceptance must restore the exact pre-run plugin lifecycle even after failure.
+        # 即使验收失败，也必须恢复运行前的插件生命周期状态。
         if commands is not None:
             report["cleanup_errors"] = cleanup_lifecycle(
                 prefix,

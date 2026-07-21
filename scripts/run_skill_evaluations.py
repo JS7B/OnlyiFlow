@@ -1,4 +1,4 @@
-"""Evaluate explicit Skill activation and workflow behavior across supported hosts."""
+"""评估各受支持宿主中的显式 Skill 激活与工作流行为。"""
 
 from __future__ import annotations
 
@@ -309,7 +309,7 @@ def run_process(
             duration_seconds=round(time.perf_counter() - started, 3),
         )
     except subprocess.TimeoutExpired:
-        # Kill the whole host process tree so timed-out MCP children cannot survive.
+        # 终止整个宿主进程树，防止超时的 MCP 子进程残留。
         terminate_process_tree(process.pid)
         stdout, stderr = process.communicate()
         return ProcessResult(
@@ -845,7 +845,7 @@ class CodexLifecycle:
 
     def cleanup(self) -> list[str]:
         errors = []
-        # Unregister the plugin before its marketplace, then verify cache absence.
+        # 先注销插件，再注销市场，最后确认缓存已清除。
         if self.plugin_added:
             try:
                 self.run(

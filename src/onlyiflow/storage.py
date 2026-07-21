@@ -1,4 +1,4 @@
-"""Persist workflow state, migrations, and compact evidence in project-local SQLite."""
+"""在项目本地 SQLite 中持久化工作流状态、迁移与紧凑证据。"""
 
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ class ProjectStore:
     def transaction(self, *, immediate: bool = False) -> Iterator[sqlite3.Connection]:
         connection = self.connect()
         try:
-            # Immediate transactions serialize competing workflow-state mutations.
+            # 即时事务用于串行化相互竞争的工作流状态写入。
             connection.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
             yield connection
             connection.commit()
@@ -684,7 +684,7 @@ class ProjectStore:
             if row is None:
                 raise self.package_not_found()
 
-            # Records attest to completed host work; this layer never executes that work.
+            # 记录仅证明宿主已完成的工作，本层不执行这些工作。
             action = record["action"]
             current = row["status"]
             target = current
@@ -1027,7 +1027,7 @@ class ProjectStore:
         ).fetchone()
         if row is None:
             return False
-        # Readiness requires both prior Waves and explicit dependencies to be complete.
+        # 就绪状态要求此前 Wave 与显式依赖均已完成。
         lower_incomplete = connection.execute(
             """
             SELECT 1 FROM work_packages

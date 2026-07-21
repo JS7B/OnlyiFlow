@@ -1,4 +1,4 @@
-"""Validate versioned Wave plans, work-package contracts, and compact handoffs."""
+"""校验版本化 Wave 计划、工作包契约与紧凑交接信息。"""
 
 from __future__ import annotations
 
@@ -252,7 +252,7 @@ def normalize_record(
         "reason_code": reason_code,
         "retryable": retryable,
     }
-    # Each action has a closed evidence shape; unrelated fields are rejected.
+    # 每种操作都有封闭的证据结构，任何无关字段都会被拒绝。
     required: dict[str, set[str]] = {
         "start": set(),
         "submit": {
@@ -314,7 +314,7 @@ def normalize_record(
 
 
 def changed_files_in_scope(changed_files: list[str], package: dict) -> bool:
-    # These are host-declared paths, checked only against the confirmed package contract.
+    # 这些路径由宿主声明，仅依据已确认的工作包契约进行校验。
     return all(
         any(path_in_scope(path, scope) for scope in package["allowed_paths"])
         and not any(path_in_scope(path, scope) for scope in package["forbidden_paths"])
@@ -498,7 +498,7 @@ def ensure_acyclic(packages: list[dict]) -> None:
 
 
 def scopes_overlap(left: str, right: str) -> bool:
-    # A trailing slash denotes a directory scope; other values denote exact files.
+    # 末尾斜杠表示目录范围，其余值表示精确文件。
     left_dir = left.endswith("/")
     right_dir = right.endswith("/")
     left_value = left[:-1] if left_dir else left

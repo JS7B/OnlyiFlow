@@ -1,4 +1,4 @@
-"""Run end-to-end release smoke scenarios against an installed host package."""
+"""针对已安装的宿主包运行端到端发布冒烟场景。"""
 
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ def run_loaded_smoke(
         raise ReleaseSmokeFailure("git_project_contract_failed")
     initial_database = database_evidence(project)
     initial_source = source_snapshot(project)
-    # Ordinary coding turns must leave both workflow state and source untouched.
+    # 普通编码回合不得改变工作流状态或源文件。
     ordinary = run_turn(
         host=host,
         project=project,
@@ -463,7 +463,7 @@ def run_post_unload(
     )
     before_database = database_evidence(project)
     before_source = source_snapshot(project)
-    # Disabled/unloaded execution must not retain an implicit OnlyiFlow surface.
+    # 禁用或卸载后的执行不得保留隐式 OnlyiFlow 能力面。
     turn = run_turn(
         host=host,
         project=project,
@@ -589,7 +589,7 @@ def main() -> int:
         except RuntimeError:
             error = "plugin_lifecycle_failed"
         finally:
-            # Release evidence is invalid unless the runner-owned lifecycle is removed.
+            # 若未清理运行器拥有的生命周期状态，发布证据即为无效。
             if lifecycle is not None:
                 raw_cleanup = lifecycle.cleanup()
                 if raw_cleanup:

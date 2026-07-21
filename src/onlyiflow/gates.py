@@ -1,4 +1,4 @@
-"""Validate, persist, and execute deterministic project Gate checks."""
+"""校验、持久化并执行确定性的项目 Gate 检查。"""
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def configure_gate_checks(config_path: Path, raw_checks: list[dict]) -> list[Gat
     content = serialize_gate_configuration(checks)
     temporary_path: Path | None = None
     try:
-        # Keep the temporary file beside the target so os.replace remains atomic.
+        # 临时文件与目标文件置于同一目录，以保证 os.replace 的原子替换。
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -175,7 +175,7 @@ def run_gate_check(check: GateCheck, project_root: Path) -> dict:
     started = time.perf_counter()
     exit_code: int | None = None
     try:
-        # Gate evidence records only compact metadata, never command output.
+        # Gate 证据只记录紧凑元数据，不保留命令输出。
         completed = subprocess.run(
             check.command,
             cwd=project_root,

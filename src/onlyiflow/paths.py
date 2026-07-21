@@ -1,4 +1,4 @@
-"""Resolve project roots and validate project-relative workflow paths."""
+"""解析项目根目录并校验项目相对工作流路径。"""
 
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def normalize_expected_files(expected_files: list[str]) -> list[str]:
             raise expected_files_error()
 
         candidate = value.strip().replace("\\", "/")
-        # Validate both path dialects so hostile input is rejected on every host OS.
+        # 同时校验两种路径语法，确保所有宿主系统都能拒绝危险输入。
         posix = PurePosixPath(candidate)
         windows = PureWindowsPath(candidate)
         if (
