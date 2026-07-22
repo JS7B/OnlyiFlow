@@ -27,13 +27,13 @@ from scripts.run_skill_evaluations import cli_prefix, run_process  # noqa: E402
 PLUGIN_ID = "onlyiflow@onlyiflow-local"
 PLUGIN_NAME = "onlyiflow"
 MARKETPLACE_NAME = "onlyiflow-local"
-EVIDENCE_LABEL = "v0.4.0-wave-candidate"
-PLUGIN_MANIFEST_VERSION = "0.4.0"
-LIFECYCLE_UPDATE_TEST_VERSION = "0.4.1-test.1"
+EVIDENCE_LABEL = "v0.5.0-repeatable-flow-candidate"
+PLUGIN_MANIFEST_VERSION = "0.5.0"
+LIFECYCLE_UPDATE_TEST_VERSION = "0.5.1-test.1"
 DEFAULT_REPORT = (
     REPOSITORY_ROOT
     / "build"
-    / "v0.4.0-wave-candidate-claude-user-install-lifecycle.json"
+    / "v0.5.0-repeatable-flow-candidate-claude-user-install-lifecycle.json"
 )
 EXPECTED_TOOLS = [
     "project_status",
@@ -47,6 +47,7 @@ EXPECTED_TOOLS = [
     "work_package_record",
     "gate_run",
     "landing_request",
+    "flow_close",
 ]
 
 

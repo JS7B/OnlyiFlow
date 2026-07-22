@@ -47,6 +47,7 @@ TOOLS = (
     "work_package_record",
     "gate_run",
     "landing_request",
+    "flow_close",
 )
 CLAUDE_TOOLS = tuple(f"mcp__plugin_onlyiflow_onlyiflow__{tool}" for tool in TOOLS)
 INFRASTRUCTURE_PATTERN = re.compile(

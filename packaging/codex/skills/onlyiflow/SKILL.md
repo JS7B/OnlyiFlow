@@ -1,6 +1,6 @@
 ---
 name: onlyiflow
-description: Use only when the user explicitly invokes OnlyiFlow or explicitly asks to start, continue, check, or land an OnlyiFlow-managed flow. Manage explicit project-local workflow state with minimal risk-based ceremony and owner-controlled landing. Do not use for ordinary coding, planning, review, or generic workflow requests.
+description: Use only when the user explicitly invokes OnlyiFlow or explicitly asks to start, continue, check, land, or close an OnlyiFlow-managed flow. Manage explicit project-local workflow state with minimal risk-based ceremony and owner-controlled landing. Do not use for ordinary coding, planning, review, or generic workflow requests.
 ---
 
 # OnlyiFlow
@@ -12,8 +12,8 @@ Keep this boundary:
 
 ## Start
 
-1. Interpret the explicit request as `status`, `start`, `continue`, `check`, or `land`. If no action
-   is stated, use `status`.
+1. Interpret the explicit request as `status`, `start`, `continue`, `check`, `land`, or `close`. If
+   no action is stated, use `status`.
 2. Resolve the current project directory explicitly. Pass the host's absolute current working
    directory to `project_status` exactly as provided; do not translate it to another path syntax
    or retry with a second path. Never select another project.
@@ -24,7 +24,7 @@ Keep this boundary:
    host's native tool search exactly once for the literal query `project_status`, then invoke the
    returned tool.
    Never inspect or modify `.onlyiflow` directly; all workflow state reads and changes must use
-   the eleven MCP tools.
+   the twelve MCP tools.
 4. Use the returned flow ID for every later tool call. If a flow is active, resume it and never call
    `flow_start` for another flow.
 5. On a structured error, report its state and returned next action, then stop instead of guessing.
@@ -47,8 +47,11 @@ confirmation turn. Require the project to be unchanged. Then report the managed 
 
 When a managed project's Gate is not configured, use ordinary host inspection only to identify the
 project's existing verification commands. This normally occurs before the first flow, but can also
-occur while resuming a flow created by an earlier OnlyiFlow version. Present the proposed check
-IDs, required flags, commands, and timeouts, then stop for owner confirmation. Never call
+occur while resuming a flow created by an earlier OnlyiFlow version. Gate is the project's fixed
+final quality check set. It runs only when the owner explicitly asks to `check` or `land`;
+configuration stores the complete list and does not run commands, install dependencies, review
+code, or perform Git operations. Present the proposed check IDs, required flags, commands, and
+timeouts, then stop for owner confirmation. Never call
 `gate_configure` before a new owner confirmation turn. After confirmation, call `gate_configure`
 once and follow its returned next action. For a project with no active flow, report that the Gate
 is ready and make `flow_start` the one next action. For an unconfigured legacy active flow, resume
@@ -69,18 +72,20 @@ unsure.
 
 ## Wave mode
 
-Wave is an optional `deep` execution mode for one Goal with multiple necessary work packages. One
-Flow is still the only active Flow. `mode=wave` requires `risk=deep`.
+Wave is an optional execution mode for one standard or deep Goal with multiple necessary work
+packages. One Flow is still the only active Flow. `mode=wave` requires `risk=standard` or
+`risk=deep`; `risk=quick` is invalid.
 
 An explicit owner request for OnlyiFlow Wave counts as mode confirmation. Otherwise state the
 objective dependency, conflict, or recovery evidence, ask whether to use Wave, and stop. Only after
 the owner explicitly selects or confirms Wave mode, read `references/wave-workflow.md` once.
 
-Start a confirmed Wave with `flow_start(mode="wave", risk="deep")`. While it is `draft`, use
-ordinary host inspection to form the complete Goal, invariants, non-goals, work packages,
+Start a confirmed Wave with `flow_start(mode="wave")` and the selected standard or deep risk.
+Standard Wave selection does not add deep-risk confirmation ceremony. While the Flow is `draft`,
+use ordinary host inspection to form the complete Goal, invariants, non-goals, work packages,
 dependencies, Wave reasoning, scopes, acceptance, and authority boundaries. Then present the
-complete Wave plan and stop for a new owner confirmation turn. Do not persist or execute a proposed
-plan.
+complete Wave plan and stop for a new owner confirmation turn. Do not persist or execute a
+proposed plan.
 
 After plan confirmation, begin with `project_status`, call `spec_submit` for the top-level compact
 spec, call `wave_plan_set` with the complete plan and returned revision, then call `flow_claim`.
@@ -120,6 +125,15 @@ next action. If the gate passes for `land`, call `landing_request`.
 
 Call `landing_request` only after a passed gate. It records `waiting_owner`; it does not approve,
 merge, push, create a pull request, or prevent direct Git commands.
+
+Before calling `flow_close`, present the Flow ID, current state, requested terminal result, and
+reason code, then stop for a separate owner confirmation turn. Use `landed` with
+`external_landing_completed` only from `waiting_owner`. Use `abandoned` from any nonterminal state
+with exactly one of `owner_cancelled`, `goal_invalidated`, `scope_drifted`, or `goal_superseded`.
+
+Call `flow_close` only after that confirmation. It records an already completed owner decision and
+never runs Git, merges, pushes, or publishes. A closed Flow releases the active slot, so start the
+next Flow without deleting `.onlyiflow`; the closed Flow and its history remain retained.
 
 ## Stop
 

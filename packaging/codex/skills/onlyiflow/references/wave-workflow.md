@@ -3,6 +3,9 @@
 Use this reference only for an owner-selected or owner-confirmed OnlyiFlow Wave. Do not load it for
 direct quick, standard, or deep flows.
 
+Standard and deep flows may use Wave mode; quick flows may not. A standard Wave still requires
+explicit selection or confirmation of Wave mode and a separate confirmation of the complete plan.
+
 ## Boundary
 
 One Flow is one Goal; work packages are children, not additional active flows.
@@ -160,3 +163,11 @@ must be classified before fixing. Infrastructure failure is not automatically a 
 
 After a passed Gate, call `landing_request` only for explicit `land`. It records
 `waiting_owner`; the host and owner retain commit, merge, push, release, and cleanup control.
+
+After the owner completes external landing, `flow_close(action="landed",
+reason_code="external_landing_completed")` may record the terminal result from `waiting_owner`.
+An obsolete, cancelled, drifted, or superseded nonterminal Flow may instead be closed as
+`abandoned` with its matching closed reason code. In both cases, present the Flow ID, current state,
+terminal result, and reason code, then wait for a separate owner confirmation before the call.
+Closing records the decision and releases the active slot; it never performs Git or deletes
+history.

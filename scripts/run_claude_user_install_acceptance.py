@@ -206,7 +206,7 @@ def installed_inventory(plugin_root: Path) -> dict:
 DEFAULT_REPORT = (
     REPOSITORY_ROOT
     / "build"
-    / "v0.4.0-wave-candidate-claude-user-install-acceptance.json"
+    / "v0.5.0-repeatable-flow-candidate-claude-user-install-acceptance.json"
 )
 
 
