@@ -15,9 +15,10 @@ explicit flow state, deterministic quality Gates, bounded Wave plans, and landin
 - Configure deterministic project Gates after a separate owner confirmation.
 - Start `quick`, `standard`, or `deep` flows according to change risk.
 - Record compact specifications and explicit implementation claims.
-- Guide confirmed deep goals through versioned Waves and bounded work packages.
+- Guide confirmed standard or deep goals through versioned Waves and bounded work packages.
 - Run configured quality checks and retain structured Gate evidence.
 - Prepare an owner-facing landing request after all required checks pass.
+- Close owner-completed flows without deleting their retained history.
 - Expose a concise workflow contract as an optional MCP Resource.
 - Provide consistent workflow semantics across Codex, Claude Code, and ZCode packages.
 
@@ -31,6 +32,10 @@ explicit flow state, deterministic quality Gates, bounded Wave plans, and landin
   migration path for older active flows with an empty Gate.
 - `v0.4.0` — Added the optional deep-only Wave workflow, versioned work-package plans, three Wave
   tools, and the bounded `onlyiflow://contract/concise` MCP Resource. This is the current release.
+
+The current source tree is an unreleased `0.5.0` development candidate. It adds optional Wave mode
+for `standard` work and the owner-confirmed `flow_close` terminal transition. `v0.4.0` remains the
+current GitHub release until separate release authorization and acceptance are complete.
 
 ## Requirements
 
@@ -157,11 +162,14 @@ one concrete instruction.
 | Initialize         | `initialize this project for OnlyiFlow and stop at each owner-confirmation boundary` |
 | Quick change       | `start a quick flow for the cache-key bug`                                           |
 | Standard change    | `start a standard flow for the authentication change`                                |
+| Standard Wave      | `start a standard Wave flow for the authentication change`                           |
 | Deep direct change | `start a deep direct flow for the storage migration`                                 |
 | Deep Wave change   | `start a deep Wave flow for the storage migration`                                   |
 | Resume             | `resume the active OnlyiFlow flow and report one next action`                        |
 | Check              | `check the active flow with its configured Gate`                                     |
 | Land               | `land the Gate-passed flow and record the owner handoff`                             |
+| Close              | `close the externally landed flow and preserve its history`                          |
+| Abandon            | `abandon the active flow because its goal was superseded`                            |
 
 For example, a complete Codex Wave invocation is:
 
@@ -209,8 +217,9 @@ Deep planning adds an owner-confirmation boundary before persistence.
 
 ### Wave Flows
 
-Wave mode is optional and available only for `deep` goals. Request it explicitly when the work
-benefits from a versioned dependency plan and bounded work packages.
+Wave mode is optional and available for `standard` or `deep` goals. `quick` Wave is invalid.
+Request Wave explicitly when the work benefits from a versioned dependency plan and bounded work
+packages. Selecting standard Wave does not add deep-risk confirmation ceremony.
 
 The start and confirmation turns are separate:
 
@@ -269,16 +278,23 @@ An explicit check instruction invokes `gate_run`. Required failures keep the flo
 An explicit land instruction after a passing Gate invokes `landing_request` and records
 `waiting_owner`. Commit, merge, push, and release remain owner-controlled host actions.
 
+After external landing is complete, `flow_close(action="landed",
+reason_code="external_landing_completed")` records the separately confirmed terminal decision.
+Any non-terminal flow may instead be closed as `abandoned` with one of the supported reason codes.
+Closing releases the active-flow slot while preserving the Flow, spec, Gate, Wave, package, and
+event history; it performs no Git or release action.
+
 ## MCP Surface
 
-OnlyiFlow v0.4.0 exposes eleven deterministic MCP tools:
+The current unreleased `0.5.0` source exposes twelve deterministic MCP tools. The `v0.4.0` release
+contains the first eleven; `flow_close` is the candidate addition.
 
 | Tool                    | Responsibility                                                                    |
 | ----------------------- | --------------------------------------------------------------------------------- |
 | `project_status`      | Read project readiness, the active flow, current Gate state, and one next action. |
 | `project_init`        | Create project-local workflow state after owner confirmation.                     |
 | `gate_configure`      | Atomically store the complete owner-confirmed Gate configuration.                 |
-| `flow_start`          | Start a`quick`, `standard`, or `deep` direct/Wave flow.                     |
+| `flow_start`          | Start a `quick`, `standard`, or `deep` direct/Wave flow.                    |
 | `spec_submit`         | Store one compact specification for a standard or deep flow.                      |
 | `wave_plan_set`       | Store a complete initial Wave plan or confirmed plan revision.                    |
 | `flow_claim`          | Move a ready standard or deep flow into implementation.                           |
@@ -286,6 +302,7 @@ OnlyiFlow v0.4.0 exposes eleven deterministic MCP tools:
 | `work_package_record` | Record one completed host-owned package transition.                               |
 | `gate_run`            | Run configured checks and store compact Gate evidence.                            |
 | `landing_request`     | Record the owner-controlled landing handoff after a passed Gate.                  |
+| `flow_close`          | Record a confirmed terminal decision, release the active slot, and retain history. |
 
 It also exposes one optional static Resource:
 
