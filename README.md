@@ -31,11 +31,10 @@ explicit flow state, deterministic quality Gates, bounded Wave plans, and landin
 - `v0.3.0` — Added owner-confirmed Gate configuration, project readiness reporting, and a bounded
   migration path for older active flows with an empty Gate.
 - `v0.4.0` — Added the optional deep-only Wave workflow, versioned work-package plans, three Wave
-  tools, and the bounded `onlyiflow://contract/concise` MCP Resource. This is the current release.
-
-The current source tree is an unreleased `0.5.0` development candidate. It adds optional Wave mode
-for `standard` work and the owner-confirmed `flow_close` terminal transition. `v0.4.0` remains the
-current GitHub release until separate release authorization and acceptance are complete.
+  tools, and the bounded `onlyiflow://contract/concise` MCP Resource.
+- `v0.5.0` — Added optional Wave mode for `standard` work and owner-confirmed `flow_close`
+  transitions that release the active slot while preserving workflow history. This is the current
+  release.
 
 ## Requirements
 
@@ -286,8 +285,7 @@ event history; it performs no Git or release action.
 
 ## MCP Surface
 
-The current unreleased `0.5.0` source exposes twelve deterministic MCP tools. The `v0.4.0` release
-contains the first eleven; `flow_close` is the candidate addition.
+OnlyiFlow v0.5.0 exposes twelve deterministic MCP tools:
 
 | Tool                    | Responsibility                                                                    |
 | ----------------------- | --------------------------------------------------------------------------------- |
