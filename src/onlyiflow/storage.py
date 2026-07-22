@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS domain_events (
     event_type TEXT NOT NULL,
     from_state TEXT,
     to_state TEXT,
+    reason_code TEXT,
     created_at TEXT NOT NULL
 );
 
@@ -135,7 +136,7 @@ CREATE TABLE IF NOT EXISTS package_events (
     created_at TEXT NOT NULL
 );
 
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 """
 
 
@@ -154,8 +155,25 @@ class ProjectStore:
         return created
 
     def ensure_schema(self) -> None:
-        with self.connection() as connection:
-            connection.executescript(SCHEMA)
+        with self.transaction(immediate=True) as connection:
+            event_table = connection.execute(
+                """
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table' AND name = 'domain_events'
+                """
+            ).fetchone()
+            if event_table is not None:
+                columns = {
+                    row["name"]
+                    for row in connection.execute("PRAGMA table_info(domain_events)")
+                }
+                if "reason_code" not in columns:
+                    connection.execute(
+                        "ALTER TABLE domain_events ADD COLUMN reason_code TEXT"
+                    )
+            for statement in SCHEMA.split(";"):
+                if statement.strip():
+                    connection.execute(statement)
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.paths.database, timeout=5)
@@ -481,6 +499,57 @@ class ProjectStore:
             updated = self._flow(connection, flow_id)
         return dict(updated)
 
+    def close_flow(
+        self,
+        *,
+        flow_id: str,
+        action: str,
+        reason_code: str,
+        closed_at: str,
+    ) -> dict:
+        with self.transaction(immediate=True) as connection:
+            row = self._flow(connection, flow_id)
+            if row is None:
+                raise self.flow_not_found()
+            previous_state = row["state"]
+            nonterminal = {
+                "draft",
+                "ready",
+                "implementing",
+                "gate_passed",
+                "waiting_owner",
+            }
+            allowed = (
+                previous_state == "waiting_owner"
+                if action == "landed"
+                else (previous_state in nonterminal)
+            )
+            if not allowed:
+                raise DomainError(
+                    code="flow_close_not_allowed",
+                    message=f"Flow cannot be closed as {action} from {previous_state}.",
+                    retryable=True,
+                    next_action={
+                        "tool": "project_status",
+                        "reason_code": "refresh_project_state",
+                    },
+                )
+            connection.execute(
+                "UPDATE flows SET state = ?, updated_at = ? WHERE id = ?",
+                (action, closed_at, flow_id),
+            )
+            self._append_event(
+                connection,
+                flow_id=flow_id,
+                event_type=f"flow_{action}",
+                from_state=previous_state,
+                to_state=action,
+                reason_code=reason_code,
+                created_at=closed_at,
+            )
+            updated = self._flow(connection, flow_id)
+        return {**dict(updated), "previous_state": previous_state}
+
     def wave_plan_summary(self, flow_id: str) -> dict | None:
         with self.connection() as connection:
             if self._schema_version(connection) < 2:
@@ -502,10 +571,10 @@ class ProjectStore:
             flow = self._flow(connection, flow_id)
             if flow is None:
                 raise self.flow_not_found()
-            if flow["mode"] != "wave" or flow["risk"] != "deep":
+            if flow["mode"] != "wave" or flow["risk"] == "quick":
                 raise DomainError(
                     code="wave_plan_not_allowed",
-                    message="Only deep Wave flows accept a Wave plan.",
+                    message="Only standard or deep Wave flows accept a Wave plan.",
                     retryable=False,
                 )
             plan = connection.execute(
@@ -1161,15 +1230,16 @@ class ProjectStore:
         from_state: str | None,
         to_state: str | None,
         created_at: str,
+        reason_code: str | None = None,
     ) -> None:
         connection.execute(
             """
             INSERT INTO domain_events (
-                flow_id, event_type, from_state, to_state, created_at
+                flow_id, event_type, from_state, to_state, reason_code, created_at
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (flow_id, event_type, from_state, to_state, created_at),
+            (flow_id, event_type, from_state, to_state, reason_code, created_at),
         )
 
     def flow_not_found(self) -> DomainError:

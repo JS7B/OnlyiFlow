@@ -11,6 +11,7 @@ from .domain import (
     MAX_TITLE_LENGTH,
     new_flow_id,
     utc_now,
+    validate_flow_close,
     validate_flow_id,
     validate_risk,
     validate_text,
@@ -139,6 +140,17 @@ class Runtime:
     def landing_request(self, project_root: str, flow_id: str) -> Payload:
         return self._execute(lambda: self._landing_request(project_root, flow_id))
 
+    def flow_close(
+        self,
+        project_root: str,
+        flow_id: str,
+        action: str,
+        reason_code: str,
+    ) -> Payload:
+        return self._execute(
+            lambda: self._flow_close(project_root, flow_id, action, reason_code)
+        )
+
     def _project_status(self, project_root: str) -> Payload:
         paths = resolve_project_root(project_root)
         if not paths.is_managed():
@@ -251,10 +263,10 @@ class Runtime:
             )
         normalized_risk = validate_risk(risk)
         normalized_mode = validate_flow_mode(mode)
-        if normalized_mode == "wave" and normalized_risk != "deep":
+        if normalized_mode == "wave" and normalized_risk == "quick":
             raise DomainError(
-                code="wave_mode_requires_deep",
-                message="Wave mode requires deep risk.",
+                code="wave_mode_requires_standard_or_deep",
+                message="Wave mode requires standard or deep risk.",
                 retryable=True,
             )
         normalized_title = validate_text(
@@ -509,6 +521,39 @@ class Runtime:
                 "state": flow["state"],
                 "direct_git_enforcement": False,
             }
+        )
+
+    def _flow_close(
+        self,
+        project_root: str,
+        flow_id: str,
+        action: str,
+        reason_code: str,
+    ) -> Payload:
+        store = self._managed_store(project_root)
+        normalized_flow_id = validate_flow_id(flow_id)
+        normalized_action, normalized_reason = validate_flow_close(action, reason_code)
+        flow = store.close_flow(
+            flow_id=normalized_flow_id,
+            action=normalized_action,
+            reason_code=normalized_reason,
+            closed_at=utc_now(),
+        )
+        next_action = self._status_next_action(
+            None,
+            gate_config_summary(store.paths.config),
+            None,
+        )
+        return success(
+            {
+                "flow_id": normalized_flow_id,
+                "previous_state": flow["previous_state"],
+                "state": flow["state"],
+                "action": normalized_action,
+                "reason_code": normalized_reason,
+                "external_action_performed": False,
+            },
+            next_action,
         )
 
     def _managed_store(

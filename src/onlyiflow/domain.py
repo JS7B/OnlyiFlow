@@ -10,6 +10,15 @@ from .contracts import DomainError
 
 
 RISKS = {"quick", "standard", "deep"}
+CLOSE_REASONS = {
+    "landed": {"external_landing_completed"},
+    "abandoned": {
+        "owner_cancelled",
+        "goal_invalidated",
+        "scope_drifted",
+        "goal_superseded",
+    },
+}
 FLOW_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 MAX_TITLE_LENGTH = 200
 MAX_SPEC_TEXT_LENGTH = 4000
@@ -41,6 +50,22 @@ def validate_flow_id(flow_id: str) -> str:
             retryable=True,
         )
     return flow_id
+
+
+def validate_flow_close(action: str, reason_code: str) -> tuple[str, str]:
+    if not isinstance(action, str) or action not in CLOSE_REASONS:
+        raise DomainError(
+            code="flow_close_action_invalid",
+            message="Flow close action must be landed or abandoned.",
+            retryable=True,
+        )
+    if not isinstance(reason_code, str) or reason_code not in CLOSE_REASONS[action]:
+        raise DomainError(
+            code="flow_close_reason_invalid",
+            message="Flow close reason is invalid for the requested action.",
+            retryable=True,
+        )
+    return action, reason_code
 
 
 def validate_text(

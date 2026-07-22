@@ -21,18 +21,20 @@ CONCISE_CONTRACT = """# OnlyiFlow concise contract
 - Explicit invocation only.
 - The host agent owns implementation. OnlyiFlow owns explicit workflow state and deterministic landing evidence.
 - Start each explicit workflow turn with exactly one `project_status` call and follow the returned state.
-- Owner confirmation is required before `project_init`, `gate_configure`, deep-flow ceremony, and a complete Wave plan.
-- Wave mode is optional and deep-only. The host owns agents, worktrees, review, implementation, tests, and Git; OnlyiFlow records bounded plan/package state after host actions.
+- Owner confirmation is required before `project_init`, `gate_configure`, deep-flow ceremony, a complete Wave plan, and `flow_close`.
+- Wave mode is optional for standard/deep work. The host owns agents, worktrees, review, implementation, tests, and Git; OnlyiFlow records bounded plan/package state after host actions.
 
 ## State paths
 
 - quick: `project_status -> flow_start -> implementing`
 - standard/deep: `flow_start -> spec_submit -> flow_claim -> implementing`
-- deep Wave: `flow_start(wave) -> spec_submit -> wave_plan_set -> flow_claim -> implementing`
+- standard/deep Wave: `flow_start(wave) -> spec_submit -> wave_plan_set -> flow_claim -> implementing`
 - Wave completion: all packages `integrated` or validly `deferred` -> `gate_run`
 - check pass: `implementing -> gate_run -> gate_passed`
 - check fail: `implementing -> gate_run -> implementing`
 - land: `gate_passed -> landing_request -> waiting_owner`
+- close landed: `waiting_owner -> flow_close -> landed`
+- abandon: non-terminal `flow_close -> abandoned`
 
 At most one non-terminal flow exists per project. At most one next action is reported.
 Gate checks are deterministic. Landing remains owner-controlled.
@@ -77,6 +79,32 @@ FlowMode = Annotated[
             "enum": ["direct", "wave"],
             "default": "direct",
             "description": "Direct flow or owner-confirmed Wave flow.",
+        }
+    ),
+]
+FlowCloseAction = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": ["landed", "abandoned"],
+            "description": "Owner-confirmed terminal Flow outcome.",
+        }
+    ),
+]
+FlowCloseReasonCode = Annotated[
+    str,
+    WithJsonSchema(
+        {
+            "type": "string",
+            "enum": [
+                "external_landing_completed",
+                "owner_cancelled",
+                "goal_invalidated",
+                "scope_drifted",
+                "goal_superseded",
+            ],
+            "description": "Closed compact reason for the terminal outcome.",
         }
     ),
 ]
@@ -403,6 +431,7 @@ TOOL_NAMES = [
     "work_package_record",
     "gate_run",
     "landing_request",
+    "flow_close",
 ]
 NEXT_ACTION_SCHEMA = {
     "type": "object",
@@ -881,6 +910,46 @@ LANDING_REQUEST_OUTPUT = response_schema(
         "additionalProperties": False,
     }
 )
+FLOW_CLOSE_OUTPUT = response_schema(
+    {
+        "type": "object",
+        "properties": {
+            "flow_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "previous_state": {
+                "type": "string",
+                "enum": [
+                    "draft",
+                    "ready",
+                    "implementing",
+                    "gate_passed",
+                    "waiting_owner",
+                ],
+            },
+            "state": {"type": "string", "enum": ["landed", "abandoned"]},
+            "action": {"type": "string", "enum": ["landed", "abandoned"]},
+            "reason_code": {
+                "type": "string",
+                "enum": [
+                    "external_landing_completed",
+                    "owner_cancelled",
+                    "goal_invalidated",
+                    "scope_drifted",
+                    "goal_superseded",
+                ],
+            },
+            "external_action_performed": {"const": False},
+        },
+        "required": [
+            "flow_id",
+            "previous_state",
+            "state",
+            "action",
+            "reason_code",
+            "external_action_performed",
+        ],
+        "additionalProperties": False,
+    }
+)
 
 
 @mcp.resource(
@@ -1065,6 +1134,21 @@ def gate_run(project_root: ProjectRoot, flow_id: FlowId) -> ToolResult:
 )
 def landing_request(project_root: ProjectRoot, flow_id: FlowId) -> ToolResult:
     return tool_result(runtime.landing_request(project_root, flow_id))
+
+
+@mcp.tool(
+    name="flow_close",
+    description="Record one owner-confirmed terminal Flow outcome without external actions.",
+    output_schema=FLOW_CLOSE_OUTPUT,
+    annotations=MUTATION,
+)
+def flow_close(
+    project_root: ProjectRoot,
+    flow_id: FlowId,
+    action: FlowCloseAction,
+    reason_code: FlowCloseReasonCode,
+) -> ToolResult:
+    return tool_result(runtime.flow_close(project_root, flow_id, action, reason_code))
 
 
 def tool_result(payload: dict) -> ToolResult:
