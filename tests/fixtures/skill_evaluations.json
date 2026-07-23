@@ -1,0 +1,234 @@
+{
+  "description_revision_limit": 1,
+  "description_revision": 1,
+  "ordinary": [
+    {
+      "id": "fix-cache-test",
+      "prompt": "Fix the failing cache invalidation test and keep the patch focused.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "implement-pagination",
+      "prompt": "Implement cursor pagination for the existing users endpoint.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "review-module",
+      "prompt": "Review the authentication module for correctness and report actionable issues.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "make-plan",
+      "prompt": "Make a concise implementation plan for adding audit-log retention.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "run-tests",
+      "prompt": "Run the unit tests, diagnose the first failure, and explain the cause.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "refactor-parser",
+      "prompt": "Refactor the parser to remove the duplicated branch without changing behavior.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "explain-control-flow",
+      "prompt": "Explain the control flow in this request handler.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "github-workflow",
+      "prompt": "Create a GitHub Actions workflow that runs the existing test command.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "deep-code-review",
+      "prompt": "Do a deep code review of the payment retry logic.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    },
+    {
+      "id": "initialize-sqlite",
+      "prompt": "Initialize a local SQLite database for this small demo application.",
+      "activate": false,
+      "onlyiflow_calls": 0
+    }
+  ],
+  "explicit": [
+    {
+      "id": "quick-start",
+      "codex_prompt": "$onlyiflow:onlyiflow start a quick flow to fix the cache-key bug in app.py.",
+      "claude_prompt": "/onlyiflow:onlyiflow start a quick flow to fix the cache-key bug in app.py.",
+      "intent": "start",
+      "activate": true,
+      "setup": "managed",
+      "expected_state": "implementing",
+      "expected_specs": 0,
+      "expected_gate_runs": 0,
+      "expected_tools": [
+        "project_status",
+        "flow_start"
+      ]
+    },
+    {
+      "id": "standard-start",
+      "codex_prompt": "$onlyiflow:onlyiflow start a standard flow in app.py for password reset; accept when reset_password returns a one-time token, with email delivery out of scope.",
+      "claude_prompt": "/onlyiflow:onlyiflow start a standard flow in app.py for password reset; accept when reset_password returns a one-time token, with email delivery out of scope.",
+      "intent": "start",
+      "activate": true,
+      "setup": "managed",
+      "expected_state": "implementing",
+      "expected_specs": 1,
+      "expected_gate_runs": 0,
+      "expected_tools": [
+        "project_status",
+        "flow_start",
+        "spec_submit",
+        "flow_claim"
+      ]
+    },
+    {
+      "id": "continue",
+      "codex_prompt": "$onlyiflow:onlyiflow continue the current managed flow.",
+      "claude_prompt": "/onlyiflow:onlyiflow continue the current managed flow.",
+      "intent": "continue",
+      "activate": true,
+      "setup": "ready",
+      "expected_state": "implementing",
+      "expected_specs": 1,
+      "expected_gate_runs": 0,
+      "expected_tools": [
+        "project_status",
+        "flow_claim"
+      ]
+    },
+    {
+      "id": "check",
+      "codex_prompt": "$onlyiflow:onlyiflow check the current managed flow.",
+      "claude_prompt": "/onlyiflow:onlyiflow check the current managed flow.",
+      "intent": "check",
+      "activate": true,
+      "setup": "implementing_with_gate",
+      "expected_state": "gate_passed",
+      "expected_specs": 0,
+      "expected_gate_runs": 1,
+      "expected_tools": [
+        "project_status",
+        "gate_run"
+      ]
+    },
+    {
+      "id": "land",
+      "codex_prompt": "$onlyiflow:onlyiflow land the current managed flow.",
+      "claude_prompt": "/onlyiflow:onlyiflow land the current managed flow.",
+      "intent": "land",
+      "activate": true,
+      "setup": "implementing_with_gate",
+      "expected_state": "waiting_owner",
+      "expected_specs": 0,
+      "expected_gate_runs": 1,
+      "expected_tools": [
+        "project_status",
+        "gate_run",
+        "landing_request"
+      ]
+    }
+  ],
+  "deep": [
+    {
+      "id": "authentication-migration",
+      "codex_prompt": "$onlyiflow:onlyiflow migrate authentication from session cookies to short-lived access tokens across the API and web client.",
+      "claude_prompt": "/onlyiflow:onlyiflow migrate authentication from session cookies to short-lived access tokens across the API and web client.",
+      "objective_evidence": [
+        "security-sensitive authentication boundary",
+        "cross-component migration"
+      ],
+      "setup": "managed",
+      "expected_risk": "deep",
+      "requires_owner_confirmation": true
+    },
+    {
+      "id": "database-cutover",
+      "codex_prompt": "$onlyiflow:onlyiflow plan a zero-downtime cutover of the production order database to a new schema used by three services.",
+      "claude_prompt": "/onlyiflow:onlyiflow plan a zero-downtime cutover of the production order database to a new schema used by three services.",
+      "objective_evidence": [
+        "production data migration",
+        "multi-service failure impact"
+      ],
+      "setup": "managed",
+      "expected_risk": "deep",
+      "requires_owner_confirmation": true
+    },
+    {
+      "id": "portable-protocol-reset",
+      "codex_prompt": "$onlyiflow:onlyiflow redesign the plugin protocol shared by Codex, Claude Code, and ZCode while preserving existing project state.",
+      "claude_prompt": "/onlyiflow:onlyiflow redesign the plugin protocol shared by Codex, Claude Code, and ZCode while preserving existing project state.",
+      "objective_evidence": [
+        "cross-host architecture change",
+        "state compatibility risk"
+      ],
+      "setup": "managed",
+      "expected_risk": "deep",
+      "requires_owner_confirmation": true
+    }
+  ],
+  "wave": [
+    {
+      "id": "wave-start-plan-proposal",
+      "codex_prompt": "$onlyiflow:onlyiflow start the already-selected Wave flow for the cache subsystem. Inspect the small fixture, present the complete work-package plan, and stop at the plan-confirmation boundary.",
+      "claude_prompt": "/onlyiflow:onlyiflow start the already-selected Wave flow for the cache subsystem. Inspect the small fixture, present the complete work-package plan, and stop at the plan-confirmation boundary.",
+      "phase": "proposal",
+      "setup": "wave_draft",
+      "expected_state": "draft",
+      "expected_specs": 0,
+      "expected_gate_runs": 0,
+      "expected_wave_revision": 0,
+      "expected_package_count": 0,
+      "expected_tools": [
+        "project_status"
+      ]
+    },
+    {
+      "id": "wave-plan-confirmation",
+      "codex_prompt": "$onlyiflow:onlyiflow I confirm the complete Wave plan for the active draft flow. Persist this exact bounded plan and claim it: Goal: normalize cache keys and add regression coverage. Invariant: public function name stays stable. Non-goal: no dependency changes. Package P (slug implementation, Wave 0): update app.py normalization; no dependencies; allowed app.py; forbidden tests/; deliver normalized behavior; no test changes; acceptance trims and lowercases; check tests; offline; no extra authorization; no independent review. Package Q (slug regression, Wave 1): add regression coverage after P; depends on P; allowed tests/; forbidden app.py; deliver regression tests; no implementation changes; acceptance covers surrounding whitespace and case; check tests; offline; no extra authorization; no independent review.",
+      "claude_prompt": "/onlyiflow:onlyiflow I confirm the complete Wave plan for the active draft flow. Persist this exact bounded plan and claim it: Goal: normalize cache keys and add regression coverage. Invariant: public function name stays stable. Non-goal: no dependency changes. Package P (slug implementation, Wave 0): update app.py normalization; no dependencies; allowed app.py; forbidden tests/; deliver normalized behavior; no test changes; acceptance trims and lowercases; check tests; offline; no extra authorization; no independent review. Package Q (slug regression, Wave 1): add regression coverage after P; depends on P; allowed tests/; forbidden app.py; deliver regression tests; no implementation changes; acceptance covers surrounding whitespace and case; check tests; offline; no extra authorization; no independent review.",
+      "phase": "confirmation",
+      "setup": "wave_draft",
+      "expected_state": "implementing",
+      "expected_specs": 1,
+      "expected_gate_runs": 0,
+      "expected_wave_revision": 1,
+      "expected_package_count": 2,
+      "expected_tools": [
+        "project_status",
+        "spec_submit",
+        "wave_plan_set",
+        "flow_claim"
+      ]
+    },
+    {
+      "id": "wave-incomplete-check",
+      "codex_prompt": "$onlyiflow:onlyiflow check the active Wave flow. Do not implement a package in this turn.",
+      "claude_prompt": "/onlyiflow:onlyiflow check the active Wave flow. Do not implement a package in this turn.",
+      "phase": "incomplete_check",
+      "setup": "wave_implementing",
+      "expected_state": "implementing",
+      "expected_specs": 1,
+      "expected_gate_runs": 0,
+      "expected_wave_revision": 1,
+      "expected_package_count": 2,
+      "expected_tools": [
+        "project_status"
+      ]
+    }
+  ]
+}

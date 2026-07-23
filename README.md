@@ -1,65 +1,61 @@
 # OnlyiFlow
 
-[简体中文](README.zh-CN.md) | English
+OnlyiFlow 是面向 Codex、Claude Code 和 ZCode 的项目级开发工作流插件。它由一个显式调用的
+Skill、一个确定性的本地 stdio MCP 服务器，以及基于 SQLite 的工作流状态存储组成。
 
-OnlyiFlow is a project-local development workflow plugin for Codex, Claude Code, and ZCode. It
-combines an explicitly invoked Skill, a deterministic local stdio MCP server, and SQLite-backed
-workflow state.
+宿主编码代理负责规划、实现、调试和测试；OnlyiFlow 负责协调明确的流程状态、确定性质量 Gate、
+有界 Wave 计划和落地证据。
 
-The host coding agent owns planning, implementation, debugging, and testing. OnlyiFlow coordinates
-explicit flow state, deterministic quality Gates, bounded Wave plans, and landing evidence.
+## 核心能力
 
-## Capabilities
+- 经所有者确认后初始化项目级工作流状态。
+- 经单独的所有者确认后配置确定性项目 Gate。
+- 根据变更风险启动 `quick`、`standard` 或 `deep` 流程。
+- 记录精简规格和明确的实现认领状态。
+- 以版本化 Wave 和有界工作包引导经确认的 standard 或 deep 目标。
+- 执行配置的质量检查并保存结构化 Gate 证据。
+- 在全部必需检查通过后生成面向所有者的落地请求。
+- 在不删除保留历史的前提下关闭所有者已处理完成的流程。
+- 以可选 MCP Resource 提供精简工作流契约。
+- 在 Codex、Claude Code 和 ZCode 宿主包中提供一致的工作流语义。
 
-- Initialize project-local workflow state after owner confirmation.
-- Configure deterministic project Gates after a separate owner confirmation.
-- Start `quick`, `standard`, or `deep` flows according to change risk.
-- Record compact specifications and explicit implementation claims.
-- Guide confirmed standard or deep goals through versioned Waves and bounded work packages.
-- Run configured quality checks and retain structured Gate evidence.
-- Prepare an owner-facing landing request after all required checks pass.
-- Close owner-completed flows without deleting their retained history.
-- Expose a concise workflow contract as an optional MCP Resource.
-- Provide consistent workflow semantics across Codex, Claude Code, and ZCode packages.
+## 版本沿革
 
-## Releases
+- `v0.1.0` — 建立显式调用的 Skill、项目级 SQLite 状态、确定性 MCP 工作流、
+  `quick`/`standard`/`deep` 风险等级、质量 Gate 和落地交接。
+- `v0.2.0` — 增加通过保留的本地 Marketplace 和用户自行选择的 Python 环境完成的 Claude Code
+  `user` 范围持久安装。
+- `v0.3.0` — 增加经所有者确认的 Gate 配置、项目就绪状态，以及对 Gate 仍为空的旧版活动流程的
+  受限迁移路径。
+- `v0.4.0` — 增加可选的 deep-only Wave 工作流、版本化工作包计划、三个 Wave 工具，以及受限的
+  `onlyiflow://contract/concise` MCP Resource。
+- `v0.5.0` — 增加适用于 `standard` 工作的可选 Wave 模式，以及经所有者确认的 `flow_close`
+  终态转换；关闭流程会释放活动槽位并保留工作流历史。该版本为当前正式版本。
 
-- `v0.1.0` — Established the explicitly invoked Skill, project-local SQLite state, deterministic
-  MCP workflow, `quick`/`standard`/`deep` risk levels, quality Gates, and landing handoff.
-- `v0.2.0` — Added persistent Claude Code `user`-scope installation through a retained local
-  Marketplace and a user-selected Python environment.
-- `v0.3.0` — Added owner-confirmed Gate configuration, project readiness reporting, and a bounded
-  migration path for older active flows with an empty Gate.
-- `v0.4.0` — Added the optional deep-only Wave workflow, versioned work-package plans, three Wave
-  tools, and the bounded `onlyiflow://contract/concise` MCP Resource.
-- `v0.5.0` — Added optional Wave mode for `standard` work and owner-confirmed `flow_close`
-  transitions that release the active slot while preserving workflow history. This is the current
-  release.
+## 运行要求
 
-## Requirements
+- Python 3.11 或更高版本
+- `requirements.txt` 中声明的软件包
+- Codex、Claude Code 或 ZCode
+- 从源码构建宿主包时所需的本地仓库检出
 
-- Python 3.11 or newer
-- The packages declared in `requirements.txt`
-- Codex, Claude Code, or ZCode
-- A local repository checkout when building host packages from source
-
-Select any Python environment and make its `python` command available to the host process. Install
-the runtime dependencies into that environment:
+请选择任意 Python 环境，并确保宿主进程能够找到该环境的 `python` 命令。将运行依赖安装到
+所选环境：
 
 ```powershell
 python --version
 python -m pip install -r requirements.txt
 ```
 
-## Build Host Packages
+## 构建宿主包
 
-From the repository root, generate isolated host packages:
+在仓库根目录生成相互隔离的宿主包：
 
 ```powershell
 python -B scripts\build_loader_candidates.py
 ```
 
-The command creates:
+该命令生成：
 
 ```text
 build/loader-candidates/codex-marketplace/
@@ -67,22 +63,20 @@ build/loader-candidates/claude-marketplace/
 build/loader-candidates/zcode/
 ```
 
-Use an empty output directory for each fresh build. Every generated host package is
-self-contained.
+每次全新构建应使用空的输出目录。各宿主的生成目录均为自包含结构。
 
-## Install And Start
+## 安装与启动
 
 ### Codex
 
-Replace `<codex>` with a working Codex CLI command and `<repository-root>` with the absolute path
-to this repository:
+将 `<codex>` 替换为可用的 Codex CLI 命令，将 `<仓库根目录>` 替换为本仓库的绝对路径：
 
 ```powershell
-<codex> plugin marketplace add "<repository-root>\build\loader-candidates\codex-marketplace" --json
+<codex> plugin marketplace add "<仓库根目录>\build\loader-candidates\codex-marketplace" --json
 <codex> plugin add onlyiflow@onlyiflow-dev --json
 ```
 
-Start a new Codex task, then invoke:
+新建 Codex 任务，然后调用：
 
 ```text
 $onlyiflow:onlyiflow
@@ -90,16 +84,16 @@ $onlyiflow:onlyiflow
 
 ### Claude Code
 
-Copy or extract `build/loader-candidates/claude-marketplace/` to a stable local directory. Replace
-`<retained-claude-marketplace>` with that directory:
+将 `build/loader-candidates/claude-marketplace/` 复制或解压到稳定的本地目录。将
+`<保留的-Claude-Marketplace目录>` 替换为该目录：
 
 ```powershell
-python -m pip install -r "<retained-claude-marketplace>\plugins\onlyiflow\requirements.txt"
-claude plugin marketplace add "<retained-claude-marketplace>" --scope user
+python -m pip install -r "<保留的-Claude-Marketplace目录>\plugins\onlyiflow\requirements.txt"
+claude plugin marketplace add "<保留的-Claude-Marketplace目录>" --scope user
 claude plugin install onlyiflow@onlyiflow-local --scope user
 ```
 
-Start a fresh Claude Code session in the target project, then invoke:
+在目标项目中新建 Claude Code 会话，然后调用：
 
 ```text
 /onlyiflow:onlyiflow
@@ -107,15 +101,14 @@ Start a fresh Claude Code session in the target project, then invoke:
 
 ### ZCode
 
-1. Open **Plugin Management** and choose **Add Marketplace**.
-2. Select `build/loader-candidates/zcode/`.
-3. Install `onlyiflow` from the local Marketplace.
-4. Start a new task in the target project and select the OnlyiFlow Skill in the composer.
+1. 打开“插件管理”，选择“添加插件市场”。
+2. 选择 `build/loader-candidates/zcode/`。
+3. 从本地 Marketplace 安装 `onlyiflow`。
+4. 在目标项目中新建任务，并在输入区选择 OnlyiFlow Skill。
 
-## Uninstall
+## 卸载
 
-Close active host sessions before changing plugin state. Removing the host plugin does not remove
-project-local `.onlyiflow/` workflow state.
+修改插件状态前应关闭活动宿主会话。卸载宿主插件不会删除项目级 `.onlyiflow/` 工作流状态。
 
 ### Codex
 
@@ -124,7 +117,7 @@ project-local `.onlyiflow/` workflow state.
 <codex> plugin marketplace remove onlyiflow-dev
 ```
 
-Start a new Codex task after removal.
+卸载后新建 Codex 任务。
 
 ### Claude Code
 
@@ -133,64 +126,63 @@ claude plugin uninstall onlyiflow@onlyiflow-local --scope user --yes
 claude plugin marketplace remove onlyiflow-local --scope user
 ```
 
-After both commands succeed, the retained local Marketplace directory may be removed. Start a new
-Claude Code session to refresh the available Skill and MCP inventory.
+两条命令均成功后，可以删除保留的本地 Marketplace 目录。新建 Claude Code 会话以刷新可用的
+Skill 和 MCP 清单。
 
 ### ZCode
 
-1. Open **Plugin Management** and switch to **Installed**.
-2. Remove `onlyiflow`.
-3. Confirm that its Skill and MCP server are no longer loaded.
-4. Remove the local Marketplace source from **Discover** only when it is no longer needed.
+1. 打开“插件管理”，切换到“已安装”。
+2. 卸载 `onlyiflow`。
+3. 确认其 Skill 与 MCP 服务器不再加载。
+4. 仅在不再需要时，从“发现”中移除本地 Marketplace 源。
 
-## Run A Workflow
+## 执行工作流
 
-Only explicit OnlyiFlow requests activate the workflow. Combine the host-specific invocation with
-one concrete instruction.
+只有明确调用 OnlyiFlow 才会激活工作流。将宿主对应的调用方式与一条具体指令组合使用。
 
-| Host        | Invocation                                              |
-| ----------- | ------------------------------------------------------- |
-| Codex       | `$onlyiflow:onlyiflow <instruction>`                  |
-| Claude Code | `/onlyiflow:onlyiflow <instruction>`                  |
-| ZCode       | Select the OnlyiFlow Skill, then enter`<instruction>` |
+| 宿主        | 调用方式                                 |
+| ----------- | ---------------------------------------- |
+| Codex       | `$onlyiflow:onlyiflow <指令>`          |
+| Claude Code | `/onlyiflow:onlyiflow <指令>`          |
+| ZCode       | 选择 OnlyiFlow Skill，然后输入`<指令>` |
 
-### Common Instructions
+### 常用指令
 
-| Intent             | Example instruction                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| Initialize         | `initialize this project for OnlyiFlow and stop at each owner-confirmation boundary` |
-| Quick change       | `start a quick flow for the cache-key bug`                                           |
-| Standard change    | `start a standard flow for the authentication change`                                |
-| Standard Wave      | `start a standard Wave flow for the authentication change`                           |
-| Deep direct change | `start a deep direct flow for the storage migration`                                 |
-| Deep Wave change   | `start a deep Wave flow for the storage migration`                                   |
-| Resume             | `resume the active OnlyiFlow flow and report one next action`                        |
-| Check              | `check the active flow with its configured Gate`                                     |
-| Land               | `land the Gate-passed flow and record the owner handoff`                             |
-| Close              | `close the externally landed flow and preserve its history`                          |
-| Abandon            | `abandon the active flow because its goal was superseded`                            |
+| 目的             | 指令示例                                                   |
+| ---------------- | ---------------------------------------------------------- |
+| 初始化           | `为当前项目初始化 OnlyiFlow，并在每个所有者确认边界停止` |
+| 快速变更         | `为缓存键问题启动 quick 流程`                            |
+| 标准变更         | `为身份认证变更启动 standard 流程`                       |
+| 标准 Wave        | `为身份认证变更启动 standard Wave 流程`                  |
+| 深度 direct 变更 | `为存储迁移启动 deep direct 流程`                        |
+| 深度 Wave 变更   | `为存储迁移启动 deep Wave 流程`                          |
+| 恢复             | `恢复当前活动的 OnlyiFlow 流程，并报告一个下一步动作`    |
+| 检查             | `使用已配置的 Gate 检查当前活动流程`                     |
+| 落地             | `落地已通过 Gate 的流程，并记录所有者交接`               |
+| 关闭             | `关闭已经在外部落地的流程并保留历史`                     |
+| 放弃             | `因为目标已被取代而放弃当前活动流程`                     |
 
-For example, a complete Codex Wave invocation is:
+例如，一条完整的 Codex Wave 调用指令是：
 
 ```text
-$onlyiflow:onlyiflow start a deep Wave flow for this migration goal
+$onlyiflow:onlyiflow 为这个迁移目标启动 deep Wave 流程
 ```
 
-### First Use In A Project
+### 项目首次使用
 
-The first explicit request establishes two owner-confirmed boundaries:
+首次显式请求会建立两个所有者确认边界：
 
 ```text
 project_status
-  -> owner confirms project initialization
+  -> 所有者确认初始化项目
 project_init
-  -> host presents the complete Gate proposal
-  -> owner confirms the Gate configuration
+  -> 宿主展示完整 Gate 方案
+  -> 所有者确认 Gate 配置
 gate_configure
-  -> project ready
+  -> 项目就绪
 ```
 
-`project_status` is read-only. `project_init` creates exactly:
+`project_status` 是只读操作。`project_init` 只创建：
 
 ```text
 <project>/.onlyiflow/
@@ -199,60 +191,56 @@ gate_configure
   specs/
 ```
 
-The host presents every Gate check, command, required flag, and timeout before the separate
-confirmation that authorizes `gate_configure`.
+宿主必须在单独确认 `gate_configure` 前展示每个 Gate 检查、命令、必需标记和超时设置。
 
-### Direct Flows
+### Direct 流程
 
-| Risk         | Use                                             | Route to implementation                                       |
-| ------------ | ----------------------------------------------- | ------------------------------------------------------------- |
-| `quick`    | Small, well-understood changes                  | `project_status -> flow_start`                              |
-| `standard` | Changes needing one compact specification       | `project_status -> flow_start -> spec_submit -> flow_claim` |
-| `deep`     | High-risk work needing owner-confirmed planning | `project_status -> flow_start -> spec_submit -> flow_claim` |
+| 风险         | 适用场景                       | 进入实现阶段的调用路径                                        |
+| ------------ | ------------------------------ | ------------------------------------------------------------- |
+| `quick`    | 小型且边界明确的变更           | `project_status -> flow_start`                              |
+| `standard` | 需要一份精简规格的变更         | `project_status -> flow_start -> spec_submit -> flow_claim` |
+| `deep`     | 需要所有者确认规划的高风险工作 | `project_status -> flow_start -> spec_submit -> flow_claim` |
 
-A configured `quick` flow enters `implementing` atomically. `standard` and direct `deep` flows
-start in `draft`, store one compact specification, and enter implementation through `flow_claim`.
-Deep planning adds an owner-confirmation boundary before persistence.
+已配置项目中的 `quick` 流程会原子进入 `implementing`。`standard` 和 direct `deep` 流程从
+`draft` 开始，保存一份精简规格，再通过 `flow_claim` 进入实现阶段。deep 规划在持久化前增加
+所有者确认边界。
 
-### Wave Flows
+### Wave 流程
 
-Wave mode is optional and available for `standard` or `deep` goals. `quick` Wave is invalid.
-Request Wave explicitly when the work benefits from a versioned dependency plan and bounded work
-packages. Selecting standard Wave does not add deep-risk confirmation ceremony.
+Wave 模式是适用于 `standard` 或 `deep` 目标的可选能力，`quick` Wave 无效。当任务适合使用
+版本化依赖计划和有界工作包时，应在指令中明确要求 Wave。选择 standard Wave 不会增加 deep
+风险确认流程。
 
-The start and confirmation turns are separate:
+启动回合与确认回合相互独立：
 
 ```text
-Start turn:
+启动回合：
 project_status -> flow_start(mode="wave")
-  -> host presents the complete Wave and work-package plan
-  -> stop for owner confirmation
+  -> 宿主展示完整 Wave 与工作包计划
+  -> 停止并等待所有者确认
 
-Confirmation turn:
+确认回合：
 project_status -> spec_submit -> wave_plan_set -> flow_claim
-  -> state: implementing
+  -> 状态：implementing
 ```
 
-The complete plan defines the goal, invariants, non-goals, package dependencies, Wave numbers,
-allowed and forbidden paths, deliverables, acceptance conditions, authorization requirements, and
-conflict reasoning. Plan confirmation does not authorize dependency installation, external writes,
-Git operations, or publication unless the owner grants them separately.
+完整计划包括目标、不变量、非目标、工作包依赖、Wave 编号、允许与禁止路径、交付物、验收条件、
+授权要求和冲突分析。确认计划不代表授权安装依赖、外部写入、Git 操作或发布；这些操作仍需所有者
+另行授权。
 
-The host decides whether and how to use native agents, worktrees, reviews, and Git while executing
-the confirmed plan.
+执行已确认计划时，是否以及如何使用宿主原生 Agent、worktree、评审和 Git 由宿主决定。
 
-During implementation:
+实现阶段按以下方式推进：
 
-1. `project_status` reports the current Wave and one next action.
-2. `work_package_status` returns one target package contract.
-3. The host performs the implementation, review, testing, worktree, or agent actions it chooses.
-4. `work_package_record` records the completed host action.
-5. Integrated dependencies unlock packages in later Waves.
-6. Material replanning requires another complete `wave_plan_set` revision and owner confirmation.
-7. The final Gate remains unavailable until every package is `integrated` or a conditional package
-   is validly `deferred`.
+1. `project_status` 报告当前 Wave 和一个下一步动作。
+2. `work_package_status` 返回一个目标包的有界契约。
+3. 宿主按需完成实现、评审、测试、worktree 或 Agent 操作。
+4. `work_package_record` 记录已经完成的宿主动作。
+5. 前置包记录为 `integrated` 后，后续 Wave 的依赖包才会解锁。
+6. 实质性重规划必须再次提交完整 `wave_plan_set` 修订并由所有者确认。
+7. 所有包均为 `integrated`，或有条件的包被有效记录为 `deferred` 后，才能执行最终 Gate。
 
-`work_package_record` supports these closed actions:
+`work_package_record` 支持以下封闭动作：
 
 ```text
 start
@@ -266,60 +254,56 @@ resume
 defer
 ```
 
-These actions record host work; they do not execute an agent, worktree, review, command, or Git
-operation.
+这些动作只记录宿主已经完成的工作，不会执行 Agent、worktree、评审、命令或 Git 操作。
 
-### Check And Land
+### 检查与落地
 
-An explicit check instruction invokes `gate_run`. Required failures keep the flow in
-`implementing`; a passing Gate moves it to `gate_passed`.
+明确提出检查指令会调用 `gate_run`。必需检查失败时，流程保持 `implementing`；Gate 通过后，
+流程进入 `gate_passed`。
 
-An explicit land instruction after a passing Gate invokes `landing_request` and records
-`waiting_owner`. Commit, merge, push, and release remain owner-controlled host actions.
+Gate 通过后，明确提出落地指令会调用 `landing_request`，并记录 `waiting_owner`。提交、合并、推送
+和发布仍由所有者通过宿主控制。
 
-After external landing is complete, `flow_close(action="landed",
-reason_code="external_landing_completed")` records the separately confirmed terminal decision.
-Any non-terminal flow may instead be closed as `abandoned` with one of the supported reason codes.
-Closing releases the active-flow slot while preserving the Flow, spec, Gate, Wave, package, and
-event history; it performs no Git or release action.
+外部落地完成后，`flow_close(action="landed", reason_code="external_landing_completed")` 会记录
+单独确认的终态决定。任意非终态流程也可以使用支持的原因码关闭为 `abandoned`。关闭操作会释放
+活动流程槽位，同时保留 Flow、规格、Gate、Wave、工作包和事件历史；它不会执行 Git 或发布操作。
 
-## MCP Surface
+## MCP 表面
 
-OnlyiFlow v0.5.0 exposes twelve deterministic MCP tools:
+OnlyiFlow v0.5.0 暴露十二个确定性 MCP 工具：
 
-| Tool                    | Responsibility                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `project_status`      | Read project readiness, the active flow, current Gate state, and one next action. |
-| `project_init`        | Create project-local workflow state after owner confirmation.                     |
-| `gate_configure`      | Atomically store the complete owner-confirmed Gate configuration.                 |
-| `flow_start`          | Start a `quick`, `standard`, or `deep` direct/Wave flow.                    |
-| `spec_submit`         | Store one compact specification for a standard or deep flow.                      |
-| `wave_plan_set`       | Store a complete initial Wave plan or confirmed plan revision.                    |
-| `flow_claim`          | Move a ready standard or deep flow into implementation.                           |
-| `work_package_status` | Read one bounded package contract and its current state.                          |
-| `work_package_record` | Record one completed host-owned package transition.                               |
-| `gate_run`            | Run configured checks and store compact Gate evidence.                            |
-| `landing_request`     | Record the owner-controlled landing handoff after a passed Gate.                  |
-| `flow_close`          | Record a confirmed terminal decision, release the active slot, and retain history. |
+| 工具                    | 职责                                                         |
+| ----------------------- | ------------------------------------------------------------ |
+| `project_status`      | 读取项目就绪状态、活动流程、当前 Gate 状态和一个下一步动作。 |
+| `project_init`        | 经所有者确认后创建项目级工作流状态。                         |
+| `gate_configure`      | 原子保存完整且经所有者确认的 Gate 配置。                     |
+| `flow_start`          | 启动`quick`、`standard` 或 `deep` direct/Wave 流程。   |
+| `spec_submit`         | 为 standard 或 deep 流程保存一份精简规格。                   |
+| `wave_plan_set`       | 保存完整的初始 Wave 计划或经确认的计划修订。                 |
+| `flow_claim`          | 将 ready 状态的 standard 或 deep 流程推进到实现阶段。        |
+| `work_package_status` | 读取一个有界工作包契约及其当前状态。                         |
+| `work_package_record` | 记录一个已完成的宿主工作包状态转换。                         |
+| `gate_run`            | 运行配置的检查并保存精简 Gate 证据。                         |
+| `landing_request`     | Gate 通过后记录由所有者控制的落地交接。                      |
+| `flow_close`          | 记录经确认的终态决定、释放活动槽位并保留历史。               |
 
-It also exposes one optional static Resource:
+同时暴露一个可选的静态 Resource：
 
 ```text
 onlyiflow://contract/concise
 ```
 
-The Resource summarizes the workflow contract without carrying project state. Dynamic state always
-comes from `project_status`. OnlyiFlow exposes no MCP Prompt templates.
+该 Resource 只概述工作流契约，不携带项目状态。动态状态始终来自 `project_status`。OnlyiFlow
+不暴露 MCP Prompt 模板。
 
-## Repository Layout
+## 仓库结构
 
-- `src/onlyiflow/`: domain, storage, Gate, Wave, and workflow runtime
-- `server/stdio.py`: plugin-local stdio server bootstrap
-- `packaging/`: host manifests and Skill resources
-- `scripts/build_loader_candidates.py`: host-package builder
-- `requirements.txt`: runtime dependency contract
+- `src/onlyiflow/`：领域、存储、Gate、Wave 与工作流运行时
+- `server/stdio.py`：插件本地 stdio 服务器引导程序
+- `packaging/`：宿主清单与 Skill 资源
+- `scripts/build_loader_candidates.py`：宿主包构建器
+- `requirements.txt`：运行依赖契约
 
-## Core Product Rule
+## 产品核心规则
 
-> The host agent owns implementation. OnlyiFlow owns explicit workflow state and deterministic
-> landing evidence.
+> 宿主代理负责实现。OnlyiFlow 负责明确的工作流状态和确定性的落地证据。
